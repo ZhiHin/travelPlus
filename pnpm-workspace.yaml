@@ -1,0 +1,16 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+allowBuilds:
+  esbuild: set this to true or false
+
+# vitest depends on esbuild. On Windows the platform binary arrives via the
+# @esbuild/win32-x64 optional dependency, so esbuild's postinstall is not needed
+# for a working build — it is allow-listed here for platforms where it is.
+onlyBuiltDependencies:
+  - esbuild
+
+# pnpm 11 errors rather than warns on skipped build scripts. Since the allow-list
+# above is explicit and deliberate, a skipped script is informational, not fatal.
+strictDepBuilds: false
