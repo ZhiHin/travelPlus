@@ -1,0 +1,94 @@
+# ---------------------------------------------------------------------------
+# TravelPlus — .gitignore
+# Rules marked (LEGAL) or (SECRET) must never be relaxed.
+# ---------------------------------------------------------------------------
+
+# --- Secrets (SECRET) ------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials.json
+
+# --- Dependencies ----------------------------------------------------------
+node_modules/
+.pnpm-store/
+.yarn/
+.turbo/
+
+# --- Build and test output -------------------------------------------------
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+playwright-report/
+test-results/
+blob-report/
+.nyc_output/
+
+# --- Geographic data and routing graphs ------------------------------------
+# Large, reproducible from recorded URLs + checksums, and licence-encumbered.
+# The build scripts fetch these; they are never committed. (LEGAL)
+infra/otp/data/
+infra/otp/graphs/
+infra/gtfs/downloads/
+infra/maps/tiles/
+*.pbf
+*.osm
+*.osm.bz2
+*.mbtiles
+*.pmtiles
+graph.obj
+*.obj.gz
+streetGraph.obj
+
+# GTFS archives are ignored by default. Licence-safe test fixtures are the ONLY
+# exception and must be explicitly force-added with a recorded licence. (LEGAL)
+*gtfs*.zip
+!packages/test-utils/fixtures/**/*gtfs*.zip
+
+# --- Model files -----------------------------------------------------------
+# Ollama models live in the Ollama data directory, never in the repo.
+*.gguf
+*.safetensors
+*.bin
+models/
+.ollama/
+
+# --- Database and container state ------------------------------------------
+infra/docker/volumes/
+pgdata/
+postgres-data/
+*.dump
+*.sql.gz
+*.backup
+
+# --- Docker Desktop / OS internals -----------------------------------------
+.docker/
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Editor / tooling ------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.recommended.json
+.idea/
+*.swp
+*.swo
+.eslintcache
+.prettiercache
+
+# --- Local scratch ---------------------------------------------------------
+tmp/
+temp/
+scratch/
+*.local
