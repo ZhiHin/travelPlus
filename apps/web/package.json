@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.1.0",
     "@travelplus/config": "workspace:*",
+    "@travelplus/db": "workspace:*",
     "@travelplus/domain": "workspace:*",
     "next": "^15.5.23",
     "react": "^19.2.8",

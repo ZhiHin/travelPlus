@@ -1,7 +1,7 @@
 # Project status
 
 **Last updated:** 2026-08-20
-**Current phase:** Phase 1 — Foundation, **in progress**
+**Current phase:** Phase 1 — Foundation, **COMPLETE**. Phase 2 next.
 **Blocking:** none. Docker verified running 2026-08-20 21:43.
 
 ## Phase state
@@ -9,7 +9,7 @@
 | Phase | State | Commit |
 | --- | --- | --- |
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
-| 1 — Foundation | **In progress** — 7 of 8 stories done; P1-04 auth is next | `73eb391`, `5d84f6b`, `c5b0b81`, `46af496` |
+| 1 — Foundation | **Complete** — all 8 stories, gate met | `73eb391`…`1d240db` |
 | 2–8 | Not started | — |
 
 ## Product name
@@ -57,8 +57,8 @@ left untouched — override with `POSTGRES_PORT` if 5433 is also taken.
 | P1-01 workspace, apps, shared packages | **Done** | Boundary rule proven by 13 executable fixtures; typecheck exit 0 |
 | P1-02 PostGIS via Docker Compose | **Done** | Container healthy; healthcheck requires the `postgis` extension, not just `pg_isready` |
 | P1-03 Drizzle schema and migrations | **Done** | Migrate-from-clean verified by destroying the volume and rebuilding |
-| P1-04 auth and sessions | **Next** | Schema and RLS ready; service layer outstanding |
-| P1-05 preferences and privacy defaults | **Done (schema)** | Restrictive defaults and BR-P5/P6 check constraints applied |
+| P1-04 auth and sessions | **Done** | Argon2id, opaque tokens, CSRF, throttling — 30 integration tests |
+| P1-05 preferences and privacy defaults | **Done** | Restrictive defaults asserted on a freshly created account |
 | P1-06 RLS roles and policies | **Done** | **All 22 RLS integration tests pass against real PostgreSQL** |
 | P1-07 design tokens, shell, dock | **Done** | Production build green; a11y markup verified in rendered HTML |
 | P1-08 config validation, health, logging | **Done** | 13 config + 16 logger tests; both health endpoints verified live |
@@ -67,14 +67,14 @@ left untouched — override with `POSTGRES_PORT` if 5433 is also taken.
 
 ```
 pnpm verify            exit 0    format + lint + typecheck + tests
-pnpm test              exit 0    118 unit tests, 9 files, 0 skipped
-pnpm test:integration  exit 0     22 RLS tests against real PostgreSQL
+pnpm test              exit 0    189 unit tests, 12 files, 0 skipped
+pnpm test:integration  exit 0     52 tests (30 auth + 22 RLS) against real PostgreSQL
 next build             exit 0    4 routes, 104 kB first load
 docker run hello-world exit 0    Docker daemon verified
 pnpm db:migrate        exit 0    applied 0001_foundation.sql from a clean volume
 ```
 
-**140 tests total, 0 skipped.**
+**241 tests total, 0 skipped.**
 
 ### RLS gate — verified against a real database
 
