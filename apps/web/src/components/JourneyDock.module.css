@@ -1,0 +1,87 @@
+.dock {
+  position: fixed;
+  bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  background: var(--scrim);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-floating);
+  box-shadow: var(--shadow-floating);
+  padding: var(--space-1);
+  max-width: calc(100vw - var(--space-8));
+}
+
+.list {
+  display: flex;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* WCAG 2.2 AA minimum target (A-O9). */
+  min-width: var(--target-min);
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--graphite);
+  text-decoration: none;
+  font-size: var(--text-label);
+  font-weight: 500;
+  transition:
+    background 140ms var(--ease-map),
+    color 140ms var(--ease-map);
+}
+
+.item:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+/* The active item is marked by weight and a ground, never by the route colour —
+   that hue is reserved for verified transit. */
+.item[aria-current='page'] {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+  font-weight: 600;
+}
+
+.icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.label {
+  font-size: var(--text-data-sm);
+  letter-spacing: 0.02em;
+}
+
+/* Tablet condenses labels but keeps accessible names in the DOM. */
+@media (max-width: 900px) and (min-width: 481px) {
+  .label {
+    font-size: 0.625rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dock {
+    left: var(--space-2);
+    right: var(--space-2);
+    transform: none;
+    max-width: none;
+  }
+  .list {
+    justify-content: space-around;
+  }
+  .item {
+    flex: 1;
+  }
+}

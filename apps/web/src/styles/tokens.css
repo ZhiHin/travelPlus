@@ -1,0 +1,110 @@
+/*
+ * TravelPlus design tokens — "Transit Cartography"
+ * Implements docs/phase-0/23-DESIGN-DIRECTION.md.
+ *
+ * The rule that shapes this file: colour is a confidence channel, not a
+ * decoration channel. --route is reserved exclusively for verified transit
+ * geometry and facts. It must never appear on a button, a link or a brand
+ * flourish — spending it on a "Save" button spends the product's credibility.
+ */
+
+:root {
+  /* --- palette: warm paper, not cream ------------------------------------ */
+  --paper: #f7f5f1;
+  --paper-raised: #fffefb;
+  --ink: #16181c;
+  --graphite: #5b6069;
+  --route: #0b5fff; /* RESERVED: verified transit only */
+  --caution: #b45309; /* estimated / stale — amber, never red */
+  --void: #9aa0a8; /* unavailable — deliberately inert */
+
+  --hairline: color-mix(in srgb, var(--graphite) 18%, transparent);
+  --scrim: color-mix(in srgb, var(--paper) 88%, transparent);
+
+  /* Destination accent, overridden per trip from the cover image hue and
+     clamped into a legible band. Never applied to route geometry. */
+  --accent: #7a5c3e;
+
+  /* --- typography: three roles, three jobs -------------------------------- */
+  --font-display: 'Archivo', 'Arial Black', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  --text-display-xl: clamp(2.75rem, 6vw, 5rem);
+  --text-display-l: clamp(2rem, 4vw, 3rem);
+  --text-title: 1.5rem;
+  --text-body: 1rem;
+  --text-label: 0.8125rem;
+  --text-data: 0.8125rem;
+  --text-data-sm: 0.6875rem; /* floor — nothing meaningful goes smaller */
+
+  /* --- geometry ----------------------------------------------------------- */
+  --radius-floating: 14px;
+  --radius-control: 8px;
+  --radius-diagram: 0; /* the diagram is technical drawing, not a soft card */
+
+  /* Two elevation levels only. A page of identical drop-shadowed cards is the
+     dashboard look this product is defined against. */
+  --shadow-floating: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.1);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* --- motion: explains state changes, never decorates -------------------- */
+  --ease-map: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-map: 420ms;
+  --duration-scroll: 280ms;
+  --duration-diff: 500ms;
+
+  /* Minimum interactive target (WCAG 2.2 AA / A-O9). */
+  --target-min: 44px;
+}
+
+/* Dark is designed, not inverted: paper becomes a blue-black slate rather than
+   a darkened cream, and the route blue brightens because #0b5fff fails contrast
+   on a dark ground. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #0e1116;
+    --paper-raised: #161a21;
+    --ink: #e8e6e1;
+    --graphite: #9ba1aa;
+    --route: #4d8bff;
+    --caution: #f0a868;
+    --void: #6b7178;
+    --accent: #c39b74;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #0e1116;
+  --paper-raised: #161a21;
+  --ink: #e8e6e1;
+  --graphite: #9ba1aa;
+  --route: #4d8bff;
+  --caution: #f0a868;
+  --void: #6b7178;
+  --accent: #c39b74;
+}
+
+/* --- reduced motion: a designed variant, not a degradation ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-map: 0ms;
+    --duration-scroll: 0ms;
+    --duration-diff: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -4,6 +4,7 @@ packages:
 
 allowBuilds:
   esbuild: set this to true or false
+  sharp: set this to true or false
 
 # vitest depends on esbuild. On Windows the platform binary arrives via the
 # @esbuild/win32-x64 optional dependency, so esbuild's postinstall is not needed

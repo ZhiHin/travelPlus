@@ -1,0 +1,110 @@
+.page {
+  max-width: 68ch;
+  margin: 0 auto;
+  /* Bottom padding clears the floating dock so focus is never obscured (A-O15). */
+  padding: var(--space-8) var(--space-4) calc(var(--target-min) + var(--space-8) * 2);
+}
+
+.header {
+  padding-block: var(--space-8) var(--space-6);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  margin-bottom: var(--space-3);
+}
+
+/* Wide, low-contrast display rather than the high-contrast serif that has become
+   the default look for anything travel-adjacent. An expanded grotesque reads as
+   signage and horizon, which is what a destination name actually is. */
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-display-xl);
+  font-weight: 700;
+  font-stretch: 118%;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  color: var(--ink);
+}
+
+.lede {
+  margin-top: var(--space-4);
+  font-size: 1.0625rem;
+  color: var(--graphite);
+  max-width: 52ch;
+}
+
+.section {
+  padding-block: var(--space-8);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  font-stretch: 112%;
+  margin-bottom: var(--space-3);
+}
+
+.note {
+  color: var(--graphite);
+  max-width: 60ch;
+}
+
+.note + .note {
+  margin-top: var(--space-3);
+}
+
+.badgeGrid {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--space-6);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  /* A hairline separates; it does not box things in. No drop shadow — a page of
+     identical elevated cards is the dashboard look this design rejects. */
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--paper-raised);
+}
+
+.code {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  color: var(--void);
+}
+
+.footer {
+  padding-block: var(--space-6);
+}
+
+.attribution {
+  font-size: var(--text-data-sm);
+  font-family: var(--font-data);
+  color: var(--graphite);
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding-inline: var(--space-3);
+  }
+  .badgeRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
