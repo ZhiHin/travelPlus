@@ -18,7 +18,12 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "db:migrate": "pnpm --filter @travelplus/db migrate",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d postgres"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

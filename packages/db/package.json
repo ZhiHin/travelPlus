@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "migrate": "node --experimental-strip-types bin/migrate.mjs"
   },
   "dependencies": {
     "@travelplus/config": "workspace:*",

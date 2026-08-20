@@ -81,7 +81,9 @@ export default tseslint.config(
   // ---- MB-3: process.env is read in exactly one file ------------------------
   {
     files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
-    ignores: ['packages/config/src/index.ts'],
+    // Integration tests read connection URLs from the environment by design:
+    // they must be able to point at a CI database. They are not shipped code.
+    ignores: ['packages/config/src/index.ts', '**/*.itest.ts'],
     rules: {
       'no-restricted-properties': [
         'error',
@@ -92,6 +94,46 @@ export default tseslint.config(
             'MB-3: import the validated config from @travelplus/config instead of reading process.env.',
         },
       ],
+    },
+  },
+
+  // ---- Node globals for server-side code ------------------------------------
+  // Declared explicitly rather than by disabling no-undef, so a typo like
+  // `proces.env` is still caught. packages/domain is deliberately excluded: it
+  // must not see these at all (MB-1).
+  {
+    files: [
+      'apps/**/*.{ts,tsx}',
+      'packages/config/**/*.ts',
+      'packages/db/**/*.{ts,mjs}',
+      'packages/integrations/**/*.ts',
+      'packages/routing/**/*.ts',
+      'packages/ai/**/*.ts',
+      '**/*.itest.ts',
+      '*.config.{ts,js,mjs}',
+    ],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        crypto: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+  },
+
+  // Browser globals for client components.
+  {
+    files: ['apps/web/**/*.tsx'],
+    languageOptions: {
+      globals: { window: 'readonly', document: 'readonly', React: 'readonly' },
     },
   },
 

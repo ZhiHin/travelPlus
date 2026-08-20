@@ -2,14 +2,14 @@
 
 **Last updated:** 2026-08-20
 **Current phase:** Phase 1 — Foundation, **in progress**
-**Blocking:** **Windows restart required** before Docker can run. See §Blocker.
+**Blocking:** none. Docker verified running 2026-08-20 21:43.
 
 ## Phase state
 
 | Phase | State | Commit |
 | --- | --- | --- |
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
-| 1 — Foundation | **In progress** — 4 of 8 stories done, 4 written but unrunnable | `73eb391`, `5d84f6b`, `c5b0b81` |
+| 1 — Foundation | **In progress** — 7 of 8 stories done; P1-04 auth is next | `73eb391`, `5d84f6b`, `c5b0b81`, `46af496` |
 | 2–8 | Not started | — |
 
 ## Product name
@@ -26,11 +26,11 @@ provider names and external feed identifiers were deliberately left unchanged.
 | Windows | 11 Home, build 26200, x64 | — |
 | CPU / RAM / disk | i7-10750H 6C/12T / 15.8 GB / 72.5 GB free | Sufficient |
 | Virtualization in firmware | Enabled (`VirtualizationFirmwareEnabled=True`, SLAT=True) | **No BIOS change needed** |
-| **WSL** | Default version 2 | **Installed — inert until restart** |
-| VirtualMachinePlatform | **Enabled** | **Inert until restart** |
+| **WSL** | Default version 2, distro `docker-desktop` | **Active** |
+| VirtualMachinePlatform | **Enabled** | **Active** (`HypervisorPresent: True`) |
 | **Docker Desktop** | 4.87.0, per-user at `%LOCALAPPDATA%\Programs\DockerDesktop` | **Installed — daemon blocked on WSL** |
-| Docker client | 29.7.2 | Installed |
-| Docker Compose | v5.4.0 | Installed |
+| Docker client | 29.7.2 | Working |
+| Docker Compose | v5.4.0 | Working |
 | Node.js | v24.18.0 | Working |
 | pnpm | 11.22.0 (corepack, user-scoped at `%LOCALAPPDATA%\npm-global`) | Working |
 | Git | 2.55.0.windows.2 | Working, pushes verified |
@@ -40,52 +40,58 @@ against Docker's published hash, with a valid Authenticode signature from `CN=Do
 Installed **without** `--accept-license`, so the Docker Subscription Service Agreement is
 presented at first launch rather than accepted on the owner's behalf.
 
-## Blocker — Windows restart required
+## Blocker — RESOLVED 2026-08-20
 
-`wsl --install --no-distribution` completed successfully and `VirtualMachinePlatform` is
-**Enabled**, but Windows only loads the hypervisor at boot. The machine has not restarted since
-15 August, so the feature is enabled on disk and inert in memory:
+The pending Windows restart is done. `HypervisorPresent: True`, WSL 2 backend active,
+Docker client and server both 29.7.2, `docker run --rm hello-world` exit 0.
 
-```
-HypervisorPresent : False
-WSL2 is unable to start since virtualization is not enabled on this machine.
-```
-
-Docker Desktop reports this as "Virtualization support not detected", which is misleading — the
-hardware is fine and no BIOS change is needed. Everything requiring PostgreSQL/PostGIS or
-OpenTripPlanner is blocked until the restart.
-
-**Resume procedure**
-
-1. Save open work and **restart** Windows (use Restart, not Shut down — Fast Startup can skip the
-   kernel init that loads the hypervisor).
-2. Launch Docker Desktop from the Start menu.
-3. **Accept the Docker Subscription Service Agreement** when shown — deliberately left to the owner.
-4. Wait for the whale icon to report "Engine running".
-5. Verify: `wsl --status`, `docker version`, `docker compose version`, `docker info`,
-   `docker run --rm hello-world`.
-6. Resume the agent session with: *"Docker is running, continue Phase 1 from P1-02."*
+**One environment conflict found and worked around:** a native `postgresql-x64-17` service already
+holds port 5432 on this machine, so host connections were silently reaching *that* server and failing
+authentication. TravelPlus now maps Postgres to **5433** by default. The existing installation was
+left untouched — override with `POSTGRES_PORT` if 5433 is also taken.
 
 ## Phase 1 progress
 
 | Story | State | Evidence |
 | --- | --- | --- |
 | P1-01 workspace, apps, shared packages | **Done** | Boundary rule proven by 13 executable fixtures; typecheck exit 0 |
-| P1-02 PostGIS via Docker Compose | **Written, unrun** | `docker-compose.yml` + init SQL complete. Needs the daemon |
-| P1-03 Drizzle schema and migrations | **Written, unrun** | `0001_foundation.sql` (10 tables) + UUIDv7 helper, 10 tests |
-| P1-04 auth and sessions | **Blocked** | Needs a running database |
-| P1-05 preferences and privacy defaults | **Written, unrun** | Schema encodes restrictive defaults and BR-P5/P6 check constraints |
-| P1-06 RLS roles and policies | **Written, unrun** | Policies in the migration; `withUser()` complete, 8 tests |
+| P1-02 PostGIS via Docker Compose | **Done** | Container healthy; healthcheck requires the `postgis` extension, not just `pg_isready` |
+| P1-03 Drizzle schema and migrations | **Done** | Migrate-from-clean verified by destroying the volume and rebuilding |
+| P1-04 auth and sessions | **Next** | Schema and RLS ready; service layer outstanding |
+| P1-05 preferences and privacy defaults | **Done (schema)** | Restrictive defaults and BR-P5/P6 check constraints applied |
+| P1-06 RLS roles and policies | **Done** | **All 22 RLS integration tests pass against real PostgreSQL** |
 | P1-07 design tokens, shell, dock | **Done** | Production build green; a11y markup verified in rendered HTML |
 | P1-08 config validation, health, logging | **Done** | 13 config + 16 logger tests; both health endpoints verified live |
 
 ### Verified — commands actually run
 
 ```
-pnpm verify   exit 0    format + lint + typecheck + tests
-pnpm test     exit 0    118 tests, 9 files, 0 skipped
-next build    exit 0    4 routes, 104 kB first load
+pnpm verify            exit 0    format + lint + typecheck + tests
+pnpm test              exit 0    118 unit tests, 9 files, 0 skipped
+pnpm test:integration  exit 0     22 RLS tests against real PostgreSQL
+next build             exit 0    4 routes, 104 kB first load
+docker run hello-world exit 0    Docker daemon verified
+pnpm db:migrate        exit 0    applied 0001_foundation.sql from a clean volume
 ```
+
+**140 tests total, 0 skipped.**
+
+### RLS gate — verified against a real database
+
+All 22 tests pass as the real `travelplus_app` role, with the real migration applied. The ones that
+matter most:
+
+| Test | Result |
+| --- | --- |
+| 4 — a query with **no `WHERE` clause at all** (`SELECT id FROM trips`) | Returns zero cross-user rows |
+| 5 — no session context set | Zero rows from all five tenant tables |
+| 9 — `UPDATE`/`DELETE` on `audit_events` | `permission denied` — append-only holds |
+| 10 — `travelplus_app` is superuser? owns tables? | `false`, and owns **0** tables |
+| 10 — RLS `ENABLE` **and** `FORCE` on all 8 tenant tables | Both true on all 8 |
+
+Test 10 protects the mechanism itself: `FORCE` does not apply to a table's owner and a superuser
+bypasses RLS entirely, so a future migration granting either would silently disable every policy
+while the other tests kept passing.
 
 | Suite | Tests | Covers |
 | --- | --- | --- |
@@ -105,22 +111,11 @@ link, nav landmark, `aria-current`, roving tabindex, `lang`, and six confidence 
 
 **No tests are skipped.**
 
-## What is staged and waiting on Docker
-
-Written, reviewable, and unrunnable until the daemon starts:
-
-- `docker-compose.yml` — PostGIS 17-3.5, OTP 2.8.1, Ollama, all pinned; the Postgres healthcheck
-  requires the `postgis` extension to exist, not merely `pg_isready`
-- `infra/docker/postgres-init/01-extensions-and-roles.sql` — extensions plus the three roles; the
-  app role is deliberately neither superuser nor owner, which is what makes forced RLS bind
-- `packages/db/migrations/0001_foundation.sql` — 10 tables, enums, check constraints, and RLS
-  enabled **and forced** with `USING` plus `WITH CHECK` on every tenant table
-
 ## Open items requiring the owner
 
 | ID | Item |
 | --- | --- |
-| **X-00** | **Restart Windows**, then launch Docker Desktop and accept the DSSA |
+| ~~X-00~~ | ~~Restart Windows and start Docker~~ — **done 2026-08-20** |
 | X-01 | **Verify the data.gov.my licence** — three URLs returned 404; pilot feeds cannot be ingested until confirmed (R-17) |
 | X-09 | **Confirm commercial intent** — Open-Meteo's free tier excludes commercial products |
 
