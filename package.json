@@ -2,6 +2,7 @@
   "name": "travelplus",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "TravelPlus — map-first AI travel planner. The AI proposes; deterministic services verify.",
   "packageManager": "pnpm@11.22.0",
   "engines": {

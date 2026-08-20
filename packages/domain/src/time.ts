@@ -79,7 +79,8 @@ export function isValidZone(zone: string): boolean {
  * how an itinerary ends up an hour wrong exactly once a year.
  */
 export function resolveLocal(local: LocalDateTime): ResolveResult {
-  if (!DATE_RE.test(local.date)) throw new TypeError(`Invalid date "${local.date}", expected YYYY-MM-DD`)
+  if (!DATE_RE.test(local.date))
+    throw new TypeError(`Invalid date "${local.date}", expected YYYY-MM-DD`)
   if (!TIME_RE.test(local.time)) throw new TypeError(`Invalid time "${local.time}", expected HH:MM`)
   if (!local.zone) throw new TypeError('A time zone is required (BR-TZ3)')
   if (!isValidZone(local.zone)) throw new TypeError(`Unknown IANA zone "${local.zone}"`)

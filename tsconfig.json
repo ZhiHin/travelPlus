@@ -1,7 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "./packages/domain" },
-    { "path": "./packages/config" }
-  ]
+  "references": [{ "path": "./packages/domain" }, { "path": "./packages/config" }]
 }

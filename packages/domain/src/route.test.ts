@@ -116,7 +116,11 @@ describe('displayDeparture — the label travels with the value', () => {
   it('returns the predicted time labelled realtime when one genuinely exists', () => {
     const predicted = new Date('2026-08-20T09:14:00Z')
     const leg = transitLeg({
-      realtime: { departure: predicted, arrival: new Date('2026-08-20T09:20:00Z'), delaySeconds: 120 },
+      realtime: {
+        departure: predicted,
+        arrival: new Date('2026-08-20T09:20:00Z'),
+        delaySeconds: 120,
+      },
     })
     const d = displayDeparture(leg, provenance('REALTIME'))
     expect(d.basis).toBe('realtime')

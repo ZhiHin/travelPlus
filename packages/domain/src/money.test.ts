@@ -36,7 +36,9 @@ describe('arithmetic', () => {
 
   // BR-M2 — an implicit cross-currency sum is how a budget silently becomes fiction.
   it('refuses to combine different currencies', () => {
-    expect(() => add(money(100, 'MYR'), money(100, 'USD'))).toThrow(/without an explicit conversion/)
+    expect(() => add(money(100, 'MYR'), money(100, 'USD'))).toThrow(
+      /without an explicit conversion/,
+    )
   })
 
   it('sums an empty list to zero', () => {
@@ -126,7 +128,13 @@ describe('splitByWeights', () => {
   })
 
   it('conserves units across many weight combinations', () => {
-    const weightSets = [[1, 2, 3], [5, 5], [1, 1, 1, 1, 1, 1, 7], [3, 1], [2, 2, 2, 1]]
+    const weightSets = [
+      [1, 2, 3],
+      [5, 5],
+      [1, 1, 1, 1, 1, 1, 7],
+      [3, 1],
+      [2, 2, 2, 1],
+    ]
     for (const weights of weightSets) {
       for (let amount = 0; amount <= 300; amount += 11) {
         const shares = splitByWeights(money(amount, 'MYR'), weights)

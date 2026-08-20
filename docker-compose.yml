@@ -1,0 +1,95 @@
+# TravelPlus local stack.
+#
+# Docker runs the infrastructure; the Next.js app and the worker run natively so
+# hot reload stays fast. Ollama is reachable by URL, so a native Windows install
+# (better GPU access) and the containerised profile are both supported without a
+# code change.
+#
+#   docker compose up -d postgres        # everyday development
+#   docker compose --profile routing up -d otp
+#   docker compose --profile ai up -d ollama
+#
+# Image versions are pinned. No floating `latest` on anything that holds data or
+# serves routes — a silent major bump to PostGIS or OTP would be discovered as a
+# corrupted graph or a failed migration, not as a version change.
+
+name: travelplus
+
+services:
+  postgres:
+    # PostGIS 3.5 on PostgreSQL 17.
+    image: postgis/postgis:17-3.5
+    container_name: travelplus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: travelplus_migrator
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-travelplus_dev_only}
+      POSTGRES_DB: travelplus
+      # Deterministic collation: index ordering must not depend on the host locale.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Runs once on an empty data directory: extensions and the three roles.
+      - ./infra/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # `pg_isready` alone returns true before the init scripts finish, so also
+      # require that PostGIS is actually installed before declaring health.
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U travelplus_migrator -d travelplus && psql -U travelplus_migrator -d travelplus -tAc "SELECT 1 FROM pg_extension WHERE extname=''postgis''" | grep -q 1',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  otp:
+    # OpenTripPlanner 2.8.1 — pinned; a graph built by one version is not
+    # guaranteed loadable by another.
+    image: opentripplanner/opentripplanner:2.8.1
+    container_name: travelplus-otp
+    profiles: ['routing']
+    restart: unless-stopped
+    environment:
+      # OTP documents ~1 GB minimum for a moderate dataset; 2 GB recommended.
+      JAVA_TOOL_OPTIONS: '-Xmx${OTP_HEAP:-2G}'
+    ports:
+      - '${OTP_PORT:-8080}:8080'
+    volumes:
+      # Graph inputs and the built graph.obj. Gitignored — reproducible from the
+      # recorded feed URLs and checksums, and licence-encumbered.
+      - ./infra/otp/data:/var/opentripplanner
+    command: ['--load', '--serve', '/var/opentripplanner']
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/otp/actuators/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  ollama:
+    # Optional. Prefer a native Windows install for GPU access; this profile
+    # exists so a fresh clone can run the AI path with no extra setup.
+    image: ollama/ollama:0.12.3
+    container_name: travelplus-ollama
+    profiles: ['ai']
+    restart: unless-stopped
+    ports:
+      - '${OLLAMA_PORT:-11434}:11434'
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ['CMD-SHELL', 'ollama list || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres-data:
+    name: travelplus-postgres-data
+  ollama-models:
+    name: travelplus-ollama-models

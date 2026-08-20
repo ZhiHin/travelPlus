@@ -1,0 +1,104 @@
+import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
+
+/**
+ * Module boundaries are only real if a machine enforces them
+ * (docs/phase-0/11-MODULE-BOUNDARIES.md §4). Each rule below maps to a numbered
+ * boundary in that document and fails the build rather than warning.
+ */
+
+/** MB-1: packages/domain may not reach a framework, an ORM, HTTP or the environment. */
+const DOMAIN_FORBIDDEN = [
+  { group: ['react', 'react-dom', 'react/*'], message: 'MB-1: domain must not import React.' },
+  { group: ['next', 'next/*'], message: 'MB-1: domain must not import Next.js.' },
+  {
+    group: ['drizzle-orm', 'drizzle-orm/*', 'pg', 'postgres'],
+    message: 'MB-1: domain must not import an ORM or database driver. Declare a port instead.',
+  },
+  {
+    group: ['axios', 'node-fetch', 'undici', 'got', 'ky'],
+    message: 'MB-1: domain must not import an HTTP client. Declare a port instead.',
+  },
+  {
+    group: ['@travelplus/db', '@travelplus/routing', '@travelplus/ai', '@travelplus/integrations'],
+    message: 'MB-2: dependencies point inward. Adapters depend on domain, never the reverse.',
+  },
+  {
+    group: ['node:*', 'fs', 'path', 'crypto', 'child_process'],
+    message: 'MB-1: domain must stay platform-free. Inject what you need through a port.',
+  },
+]
+
+export default tseslint.config(
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.next/**',
+      '**/coverage/**',
+      '**/*.tsbuildinfo',
+      'packages/test-utils/fixtures/**',
+    ],
+  },
+
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
+
+  // ---- MB-1 / MB-2: the domain is the centre and depends on nothing ----------
+  {
+    files: ['packages/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: DOMAIN_FORBIDDEN }],
+      // Domain logic must be deterministic and testable. Reading the clock or the
+      // environment directly makes the REALTIME -> STALE transition untestable,
+      // which is exactly the property RISKS.md R-15 depends on.
+      'no-restricted-globals': [
+        'error',
+        { name: 'process', message: 'MB-3: only packages/config may read the environment.' },
+        { name: 'fetch', message: 'MB-1: domain must not perform I/O. Use a port.' },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'process', property: 'env', message: 'MB-3: only packages/config reads env.' },
+      ],
+    },
+  },
+
+  // ---- MB-3: process.env is read in exactly one file ------------------------
+  {
+    files: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
+    ignores: ['packages/config/src/index.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'process',
+          property: 'env',
+          message:
+            'MB-3: import the validated config from @travelplus/config instead of reading process.env.',
+        },
+      ],
+    },
+  },
+
+  // ---- Tests may be looser, but never about the boundaries ------------------
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-console': 'off',
+    },
+  },
+)

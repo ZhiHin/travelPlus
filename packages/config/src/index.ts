@@ -104,7 +104,7 @@ let cached: Env | undefined
  * consumer sees the same values.
  */
 export function loadEnv(): Env {
-  // eslint-disable-next-line no-restricted-properties -- the one permitted read
+  // The one permitted read of process.env in the entire workspace (MB-3).
   cached ??= parseEnv(process.env)
   return cached
 }
