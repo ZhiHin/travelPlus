@@ -9,7 +9,7 @@
 | Phase | State | Commit |
 | --- | --- | --- |
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
-| 1 — Foundation | **In progress** — 3 of 8 stories done | pending |
+| 1 — Foundation | **In progress** — 4 of 8 stories done, 4 written but unrunnable | `73eb391`, `5d84f6b`, `c5b0b81` |
 | 2–8 | Not started | — |
 
 ## Product name
@@ -25,14 +25,14 @@ provider names and external feed identifiers were deliberately left unchanged.
 | --- | --- | --- |
 | Windows | 11 Home, build 26200, x64 | — |
 | CPU / RAM / disk | i7-10750H 6C/12T / 15.8 GB / 72.5 GB free | Sufficient |
-| Virtualization in firmware | Enabled | **No BIOS change needed** |
-| **WSL** | Default version 2 | **Installed — needs restart to activate** |
-| VirtualMachinePlatform | Enabled | **Needs restart to take effect** |
-| **Docker Desktop** | 4.87.0 (per-user, `%LOCALAPPDATA%\Programs\DockerDesktop`) | **Installed — daemon blocked on WSL** |
+| Virtualization in firmware | Enabled (`VirtualizationFirmwareEnabled=True`, SLAT=True) | **No BIOS change needed** |
+| **WSL** | Default version 2 | **Installed — inert until restart** |
+| VirtualMachinePlatform | **Enabled** | **Inert until restart** |
+| **Docker Desktop** | 4.87.0, per-user at `%LOCALAPPDATA%\Programs\DockerDesktop` | **Installed — daemon blocked on WSL** |
 | Docker client | 29.7.2 | Installed |
 | Docker Compose | v5.4.0 | Installed |
 | Node.js | v24.18.0 | Working |
-| pnpm | 11.22.0 (via corepack, user-scoped) | Working |
+| pnpm | 11.22.0 (corepack, user-scoped at `%LOCALAPPDATA%\npm-global`) | Working |
 | Git | 2.55.0.windows.2 | Working, pushes verified |
 
 Docker Desktop was installed from the official `desktop.docker.com` installer, SHA256-verified
@@ -43,56 +43,78 @@ presented at first launch rather than accepted on the owner's behalf.
 ## Blocker — Windows restart required
 
 `wsl --install --no-distribution` completed successfully and `VirtualMachinePlatform` is
-**Enabled**, but the feature does not take effect until Windows restarts. Until then:
+**Enabled**, but Windows only loads the hypervisor at boot. The machine has not restarted since
+15 August, so the feature is enabled on disk and inert in memory:
 
 ```
+HypervisorPresent : False
 WSL2 is unable to start since virtualization is not enabled on this machine.
 ```
 
-This is expected post-install behaviour, not a fault. Docker's daemon cannot start without the
-WSL 2 backend, so everything requiring PostgreSQL/PostGIS or OpenTripPlanner is blocked:
-Phase 1 stories P1-02 through P1-06, and all of Phases 2–8.
+Docker Desktop reports this as "Virtualization support not detected", which is misleading — the
+hardware is fine and no BIOS change is needed. Everything requiring PostgreSQL/PostGIS or
+OpenTripPlanner is blocked until the restart.
 
 **Resume procedure**
 
-1. Save open work and restart Windows.
+1. Save open work and **restart** Windows (use Restart, not Shut down — Fast Startup can skip the
+   kernel init that loads the hypervisor).
 2. Launch Docker Desktop from the Start menu.
-3. **Accept the Docker Subscription Service Agreement** when shown — this is deliberately left
-   to the owner.
+3. **Accept the Docker Subscription Service Agreement** when shown — deliberately left to the owner.
 4. Wait for the whale icon to report "Engine running".
-5. Verify: `wsl --status`, `wsl --version`, `docker version`, `docker compose version`,
-   `docker info`, `docker run --rm hello-world`.
-6. Resume the agent session and ask it to continue Phase 1 from story P1-02.
+5. Verify: `wsl --status`, `docker version`, `docker compose version`, `docker info`,
+   `docker run --rm hello-world`.
+6. Resume the agent session with: *"Docker is running, continue Phase 1 from P1-02."*
 
 ## Phase 1 progress
 
 | Story | State | Evidence |
 | --- | --- | --- |
-| P1-01 workspace, apps, shared packages | **Done (partial)** | pnpm workspace, strict TS project references, typecheck exit 0 |
-| P1-02 PostGIS via Docker Compose | **Blocked** | Needs Docker daemon |
-| P1-03 Drizzle schema and migrations | **Blocked** | Needs database |
-| P1-04 auth and sessions | **Blocked** | Needs database |
-| P1-05 preferences and privacy defaults | **Blocked** | Needs database |
-| P1-06 RLS roles and policies | **Blocked** | Needs database |
-| P1-07 design tokens, shell, dock | Not started | Deliberately last, so a11y tests run against a real shell |
-| P1-08 config validation, health, logging | **Partial** | `@travelplus/config` complete with 13 tests; health and logging pending |
+| P1-01 workspace, apps, shared packages | **Done** | Boundary rule proven by 13 executable fixtures; typecheck exit 0 |
+| P1-02 PostGIS via Docker Compose | **Written, unrun** | `docker-compose.yml` + init SQL complete. Needs the daemon |
+| P1-03 Drizzle schema and migrations | **Written, unrun** | `0001_foundation.sql` (10 tables) + UUIDv7 helper, 10 tests |
+| P1-04 auth and sessions | **Blocked** | Needs a running database |
+| P1-05 preferences and privacy defaults | **Written, unrun** | Schema encodes restrictive defaults and BR-P5/P6 check constraints |
+| P1-06 RLS roles and policies | **Written, unrun** | Policies in the migration; `withUser()` complete, 8 tests |
+| P1-07 design tokens, shell, dock | **Done** | Production build green; a11y markup verified in rendered HTML |
+| P1-08 config validation, health, logging | **Done** | 13 config + 16 logger tests; both health endpoints verified live |
 
-### Verified this session
+### Verified — commands actually run
 
 ```
-pnpm typecheck   exit 0   (TypeScript strict, project references)
-pnpm test        exit 0   71 tests passed, 5 files, 0 skipped
+pnpm verify   exit 0    format + lint + typecheck + tests
+pnpm test     exit 0    118 tests, 9 files, 0 skipped
+next build    exit 0    4 routes, 104 kB first load
 ```
 
 | Suite | Tests | Covers |
 | --- | --- | --- |
-| `domain/status` | 13 | BR-T5/T6/T7 status derivation, including **ADR-0022: a positions-only feed can never yield `REALTIME`** at any point in time |
-| `domain/money` | 20 | BR-M5/M6 — splits conserve every minor unit across ~1,000 amount/part combinations, refunds included |
-| `domain/time` | 13 | BR-TZ3/TZ4/TZ5/TZ8 — DST spring-forward and fall-back, southern hemisphere, half-hour offset, KL day boundaries |
-| `domain/route` | 12 | The live-badge gate — a KL pilot departure can never be labelled realtime |
-| `config` | 13 | Startup refuses a placeholder or contact-less provider User-Agent; rejects a geocoder rate above the 1 req/s policy |
+| `domain/status` | 13 | BR-T5/T6/T7 — **a positions-only feed can never yield `REALTIME`** at any offset (ADR-0022) |
+| `domain/money` | 20 | BR-M5/M6 — splits conserve every minor unit across ~1,000 combinations, refunds included |
+| `domain/time` | 13 | BR-TZ3/4/5/8 — DST both hemispheres, half-hour offsets, KL day boundaries |
+| `domain/route` | 12 | The live-badge gate; absent fields stay absent |
+| `domain/id` | 10 | UUIDv7 ordering, including across the 2^32 millisecond boundary |
+| `config/env` | 13 | Startup refuses a placeholder or contact-less provider User-Agent |
+| `config/logger` | 16 | Redaction at any depth; coordinates coarsened to ~1 km |
+| `db/session` | 8 | `set_config(..., true)` is transaction-local, not session-leaking |
+| `test-utils/boundaries` | 13 | Hostile imports rejected through the real lint config |
 
-No tests are skipped.
+Live checks against a running server: `/api/health/live` returned 200 `{"status":"ok"}`;
+`/api/health/ready` returned 200 `degraded` with per-check detail; rendered HTML confirmed the skip
+link, nav landmark, `aria-current`, roving tabindex, `lang`, and six confidence badges with ages.
+
+**No tests are skipped.**
+
+## What is staged and waiting on Docker
+
+Written, reviewable, and unrunnable until the daemon starts:
+
+- `docker-compose.yml` — PostGIS 17-3.5, OTP 2.8.1, Ollama, all pinned; the Postgres healthcheck
+  requires the `postgis` extension to exist, not merely `pg_isready`
+- `infra/docker/postgres-init/01-extensions-and-roles.sql` — extensions plus the three roles; the
+  app role is deliberately neither superuser nor owner, which is what makes forced RLS bind
+- `packages/db/migrations/0001_foundation.sql` — 10 tables, enums, check constraints, and RLS
+  enabled **and forced** with `USING` plus `WITH CHECK` on every tenant table
 
 ## Open items requiring the owner
 

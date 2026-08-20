@@ -124,3 +124,5 @@ export function resetEnvCache(): void {
 export function publicConfig(env: Env): { mapStyleUrl: string; appUrl: string } {
   return { mapStyleUrl: env.MAP_STYLE_URL, appUrl: env.APP_URL }
 }
+
+export * from './logger.js'
