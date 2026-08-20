@@ -126,7 +126,13 @@ export async function acquire(
 
   const deadline = now().getTime() + maxWaitMs
 
-  for (;;) {
+  // A deadline alone is not enough to guarantee termination: it assumes the
+  // clock advances. An injected or frozen clock — a test, a suspended VM, a
+  // stepped debugger — would spin here forever. The attempt cap makes the loop
+  // terminate on its own terms rather than on the environment's good behaviour.
+  const maxAttempts = Math.max(2, Math.ceil(maxWaitMs / 50) + 1)
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const result = await tryAcquire(db, config, now())
     if (result.kind === 'acquired') return true
 
@@ -135,6 +141,8 @@ export async function acquire(
 
     await sleep(Math.min(result.retryAfterMs, remaining))
   }
+
+  return false
 }
 
 /** The Nominatim bucket, at the policy maximum. Do not raise. */

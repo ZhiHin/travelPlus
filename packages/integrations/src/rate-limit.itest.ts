@@ -154,3 +154,25 @@ describe('bucket isolation', () => {
     expect((await tryAcquire(dbA, other, T0)).kind).toBe('acquired')
   })
 })
+
+describe('termination guarantees', () => {
+  // A deadline alone assumes the clock advances. A frozen clock — a test, a
+  // suspended VM, a stepped debugger — would otherwise spin forever, so the
+  // attempt cap must terminate the loop on its own terms.
+  it('terminates under a frozen clock rather than looping forever', async () => {
+    await tryAcquire(dbA, bucket, T0)
+
+    let slept = 0
+    const result = await acquire(dbA, bucket, {
+      maxWaitMs: 300,
+      now: () => T0, // never advances
+      sleep: async () => {
+        slept++
+      },
+    })
+
+    expect(result).toBe(false)
+    expect(slept).toBeGreaterThan(0)
+    expect(slept).toBeLessThan(50) // bounded, not unbounded
+  }, 10_000)
+})
