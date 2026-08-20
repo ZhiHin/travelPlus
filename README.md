@@ -23,6 +23,7 @@ docs/
   DECISIONS.md          23 architecture decision records
   RISKS.md              20 risks with triggers and mitigations
   phase-0/              31 specification documents (00–29 + README)
+  phases/               one completion record per phase (PHASE-1.md, …)
 ```
 
 ## The rule that shapes everything

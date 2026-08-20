@@ -6,6 +6,8 @@
 
 ## Phase state
 
+Per-phase completion records live in [`phases/`](phases/README.md).
+
 | Phase | State | Commit |
 | --- | --- | --- |
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
