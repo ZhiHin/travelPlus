@@ -65,18 +65,31 @@ describe('timing-oracle defence', () => {
   it('spends comparable time to a real verification', async () => {
     const h = await hashPassword('a real user password here')
 
-    const realStart = performance.now()
-    await verifyPassword(h, 'the wrong password entirely')
-    const realMs = performance.now() - realStart
+    async function medianMs(run: () => Promise<unknown>, samples = 5): Promise<number> {
+      const timings: number[] = []
+      for (let i = 0; i < samples; i++) {
+        const start = performance.now()
+        await run()
+        timings.push(performance.now() - start)
+      }
+      return timings.sort((a, b) => a - b)[Math.floor(samples / 2)]!
+    }
 
-    const dummyStart = performance.now()
-    await dummyVerify('the wrong password entirely')
-    const dummyMs = performance.now() - dummyStart
+    // Warm both paths first. The first Argon2 call in a process pays JIT and
+    // allocation costs that have nothing to do with the property under test —
+    // measuring them made this assertion flaky, and a flaky security test is one
+    // that eventually gets ignored.
+    await verifyPassword(h, 'warmup')
+    await dummyVerify('warmup')
 
-    // Same order of magnitude is the property that matters; exact parity is not
-    // achievable and not required to close the oracle.
-    const ratio = Math.max(realMs, dummyMs) / Math.max(1, Math.min(realMs, dummyMs))
-    expect(ratio).toBeLessThan(10)
+    const realMs = await medianMs(() => verifyPassword(h, 'the wrong password entirely'))
+    const dummyMs = await medianMs(() => dummyVerify('the wrong password entirely'))
+
+    // Same order of magnitude is the property that matters; exact parity is
+    // neither achievable nor required to close the oracle. What must never
+    // happen is the dummy path returning ~instantly.
+    const ratio = Math.max(realMs, dummyMs) / Math.max(0.5, Math.min(realMs, dummyMs))
+    expect(ratio, `real ${realMs.toFixed(1)}ms vs dummy ${dummyMs.toFixed(1)}ms`).toBeLessThan(10)
   })
 })
 

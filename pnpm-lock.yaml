@@ -102,6 +102,25 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@24.13.3)(supports-color@7.2.0)
 
+  packages/integrations:
+    dependencies:
+      '@travelplus/config':
+        specifier: workspace:*
+        version: link:../config
+      '@travelplus/domain':
+        specifier: workspace:*
+        version: link:../domain
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@24.13.3)(supports-color@7.2.0)
+
   packages/test-utils:
     devDependencies:
       eslint:

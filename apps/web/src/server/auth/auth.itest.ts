@@ -167,18 +167,33 @@ describe('enumeration resistance', () => {
   it('takes a comparable amount of time for a known and an unknown address', async () => {
     const known = (await newVerifiedUser()).email
 
-    const t1 = performance.now()
-    await signUp(deps, { email: known, password: PASSWORD })
-    const knownMs = performance.now() - t1
-
-    const t2 = performance.now()
+    // Warm the hasher: the first Argon2 call in a process pays costs unrelated
+    // to the property under test, and measuring them made this flaky.
     await signUp(deps, { email: `${unique()}@itest.invalid`, password: PASSWORD })
-    const unknownMs = performance.now() - t2
+
+    async function medianMs(run: () => Promise<unknown>, samples = 3): Promise<number> {
+      const timings: number[] = []
+      for (let i = 0; i < samples; i++) {
+        const start = performance.now()
+        await run()
+        timings.push(performance.now() - start)
+      }
+      return timings.sort((a, b) => a - b)[Math.floor(samples / 2)]!
+    }
+
+    const knownMs = await medianMs(() => signUp(deps, { email: known, password: PASSWORD }))
+    const unknownMs = await medianMs(() =>
+      signUp(deps, { email: `${unique()}@itest.invalid`, password: PASSWORD }),
+    )
 
     // Both paths must hash. Without the deliberate hash on the existing-account
-    // branch, the known case would return an order of magnitude faster.
-    const ratio = Math.max(knownMs, unknownMs) / Math.max(1, Math.min(knownMs, unknownMs))
-    expect(ratio).toBeLessThan(10)
+    // branch, the known case returns an order of magnitude faster and becomes an
+    // oracle for exactly what the opaque response wording hides.
+    const ratio = Math.max(knownMs, unknownMs) / Math.max(0.5, Math.min(knownMs, unknownMs))
+    expect(
+      ratio,
+      `known ${knownMs.toFixed(1)}ms vs unknown ${unknownMs.toFixed(1)}ms`,
+    ).toBeLessThan(10)
   })
 })
 
