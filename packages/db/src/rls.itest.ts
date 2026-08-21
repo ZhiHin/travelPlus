@@ -260,3 +260,104 @@ describe('RLS test 10 — the app role cannot bypass its own policies', () => {
     }
   })
 })
+
+/**
+ * The gap that let migration 0003's bug through.
+ *
+ * Every test above seeds its fixtures through the migrator role, which owns the
+ * tables and so bypasses RLS entirely. That exercises cross-user READS
+ * thoroughly and the authenticated WRITE path not at all — which is exactly how
+ * an unsatisfiable INSERT policy on `trips` survived the Phase 1 gate.
+ *
+ * These create rows as the app role, under policy, the way the application does.
+ */
+describe('RLS test 11 — authenticated writes actually work', () => {
+  it('lets a user create a trip they own', async () => {
+    const tripId = uuidv7()
+    await expect(
+      asUser(userA, (tx) =>
+        tx.unsafe(
+          `INSERT INTO trips (id, owner_id, title) VALUES ('${tripId}', '${userA}', 'Written under RLS')`,
+        ),
+      ),
+    ).resolves.toBeDefined()
+
+    const rows = await owner.unsafe(`SELECT id FROM trips WHERE id = '${tripId}'`)
+    expect(rows).toHaveLength(1)
+    await owner.unsafe(`DELETE FROM trips WHERE id = '${tripId}'`)
+  })
+
+  it('refuses a trip inserted with someone else as owner', async () => {
+    const tripId = uuidv7()
+    await expect(
+      asUser(userA, (tx) =>
+        tx.unsafe(
+          `INSERT INTO trips (id, owner_id, title) VALUES ('${tripId}', '${userB}', 'Forged')`,
+        ),
+      ),
+    ).rejects.toThrow(/row-level security/i)
+  })
+
+  it('lets the owner bootstrap their own membership row', async () => {
+    const tripId = uuidv7()
+    await asUser(userA, async (tx) => {
+      await tx.unsafe(
+        `INSERT INTO trips (id, owner_id, title) VALUES ('${tripId}', '${userA}', 'Bootstrap')`,
+      )
+      await tx.unsafe(
+        `INSERT INTO trip_members (trip_id, user_id, role) VALUES ('${tripId}', '${userA}', 'OWNER')`,
+      )
+    })
+
+    const rows = await owner.unsafe(`SELECT role FROM trip_members WHERE trip_id = '${tripId}'`)
+    expect(rows).toHaveLength(1)
+
+    await owner.unsafe(`DELETE FROM trip_members WHERE trip_id = '${tripId}'`)
+    await owner.unsafe(`DELETE FROM trips WHERE id = '${tripId}'`)
+  })
+
+  it('refuses a stranger adding themselves to a trip they do not own', async () => {
+    const tripId = uuidv7()
+    await owner.unsafe(`
+      INSERT INTO trips (id, owner_id, title) VALUES ('${tripId}', '${userA}', 'Not yours');
+      INSERT INTO trip_members (trip_id, user_id, role) VALUES ('${tripId}', '${userA}', 'OWNER');
+    `)
+
+    await expect(
+      asUser(userB, (tx) =>
+        tx.unsafe(
+          `INSERT INTO trip_members (trip_id, user_id, role) VALUES ('${tripId}', '${userB}', 'EDITOR')`,
+        ),
+      ),
+    ).rejects.toThrow(/row-level security/i)
+
+    await owner.unsafe(`DELETE FROM trip_members WHERE trip_id = '${tripId}'`)
+    await owner.unsafe(`DELETE FROM trips WHERE id = '${tripId}'`)
+  })
+
+  it('lets the owner write preferences and destinations for their trip', async () => {
+    const tripId = uuidv7()
+    await asUser(userA, async (tx) => {
+      await tx.unsafe(
+        `INSERT INTO trips (id, owner_id, title) VALUES ('${tripId}', '${userA}', 'Full create')`,
+      )
+      await tx.unsafe(
+        `INSERT INTO trip_members (trip_id, user_id, role) VALUES ('${tripId}', '${userA}', 'OWNER')`,
+      )
+      await tx.unsafe(`INSERT INTO trip_preferences (trip_id) VALUES ('${tripId}')`)
+      await tx.unsafe(
+        `INSERT INTO trip_destinations (id, trip_id, name, centroid)
+         VALUES ('${uuidv7()}', '${tripId}', 'KL',
+                 ST_SetSRID(ST_MakePoint(101.6869, 3.139), 4326)::geography)`,
+      )
+    })
+
+    const dests = await owner.unsafe(`SELECT id FROM trip_destinations WHERE trip_id = '${tripId}'`)
+    expect(dests).toHaveLength(1)
+
+    await owner.unsafe(`DELETE FROM trip_destinations WHERE trip_id = '${tripId}'`)
+    await owner.unsafe(`DELETE FROM trip_preferences WHERE trip_id = '${tripId}'`)
+    await owner.unsafe(`DELETE FROM trip_members WHERE trip_id = '${tripId}'`)
+    await owner.unsafe(`DELETE FROM trips WHERE id = '${tripId}'`)
+  })
+})
