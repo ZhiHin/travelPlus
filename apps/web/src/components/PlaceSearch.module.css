@@ -1,0 +1,172 @@
+.wrapper {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  font-stretch: 112%;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-label);
+  font-weight: 500;
+  color: var(--graphite);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1;
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.input::placeholder {
+  color: var(--void);
+}
+
+/* Deliberately NOT --route: that colour is reserved for verified transit, and
+   spending it on a Search button spends the product's credibility. */
+.submit {
+  min-height: var(--target-min);
+  min-width: var(--target-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  background: transparent;
+  color: var(--void);
+  border-color: var(--hairline);
+  cursor: not-allowed;
+}
+
+/* The hint explains the submit-triggered model rather than leaving the box
+   feeling broken as the user types. */
+.hint {
+  font-size: var(--text-data-sm);
+  color: var(--graphite);
+}
+
+.local {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.localHeading {
+  font-size: var(--text-data-sm);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--graphite);
+  text-transform: uppercase;
+}
+
+.localList,
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.localItem,
+.resultButton {
+  width: 100%;
+  min-height: var(--target-min);
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.localItem {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.localItem:hover,
+.resultButton:hover {
+  border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.localKind {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  color: var(--void);
+}
+
+.status:empty {
+  display: none;
+}
+
+.queued,
+.cached {
+  font-size: var(--text-label);
+  color: var(--graphite);
+}
+
+.empty {
+  font-size: var(--text-label);
+  color: var(--graphite);
+  max-width: 48ch;
+}
+
+.error {
+  font-size: var(--text-label);
+  color: var(--caution);
+}
+
+.resultName {
+  font-weight: 600;
+}
+
+.resultDetail {
+  font-size: var(--text-label);
+  color: var(--graphite);
+}
+
+.resultCoords {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--void);
+}
+
+/* Licence condition: every rendered provider result carries its attribution. */
+.resultAttribution {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  color: var(--void);
+}
+
+@media (max-width: 480px) {
+  .row {
+    flex-direction: column;
+  }
+}

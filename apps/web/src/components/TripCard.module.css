@@ -1,0 +1,110 @@
+.card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-floating);
+  background: var(--paper-raised);
+  overflow: hidden;
+}
+
+.link {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: inherit;
+  text-decoration: none;
+  min-height: var(--target-min);
+}
+
+.link:hover {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-stretch: 115%;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  /* Destination accent, derived per trip. Never the route colour. */
+  color: var(--ink);
+}
+
+.meta {
+  font-size: var(--text-label);
+  color: var(--graphite);
+}
+
+.dates {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The mini-ribbon: the same stroke grammar as the full Journey Ribbon.
+ * Solid line with filled nodes where transit is routable; dotted with hollow
+ * nodes where it is not. Legible in greyscale, because the tier badge below
+ * repeats the same fact in words.
+ */
+.ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-block: var(--space-1);
+}
+
+.node {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--graphite);
+  flex: none;
+}
+
+.node + .node::before {
+  content: '';
+  display: block;
+  width: 22px;
+  height: 0;
+  margin-left: -30px;
+  border-top: 1.5px solid var(--graphite);
+}
+
+.ribbon[data-routed='true'] .node {
+  background: var(--route);
+  border-color: var(--route);
+}
+
+.ribbon[data-routed='true'] .node + .node::before {
+  border-top-style: solid;
+  border-top-color: var(--route);
+}
+
+.ribbon[data-routed='false'] .node {
+  background: transparent;
+  border-color: var(--void);
+  border-style: dotted;
+}
+
+.ribbon[data-routed='false'] .node + .node::before {
+  border-top-style: dotted;
+  border-top-color: var(--void);
+}
+
+.tier {
+  justify-self: start;
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  color: var(--graphite);
+}
+
+.tier[data-tier='T3'] {
+  color: var(--route);
+  border-color: color-mix(in srgb, var(--route) 40%, transparent);
+}
+
+.tier[data-tier='T0'] {
+  color: var(--void);
+}
