@@ -1,0 +1,207 @@
+.ribbon {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hint {
+  font-size: var(--text-data-sm);
+  color: var(--graphite);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+/*
+ * Each item is a node on a vertical line. The stroke ABOVE the node is the leg
+ * that arrives here; its texture carries the confidence state.
+ */
+.item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  column-gap: var(--space-3);
+  padding-block: var(--space-2);
+  min-height: var(--target-min);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.item[data-selected='true'] {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.item[data-grabbed='true'] {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  box-shadow: var(--shadow-floating);
+}
+
+/* --- the stroke: solid / dashed / dotted --------------------------------- */
+.stroke {
+  position: absolute;
+  left: 13px;
+  top: -4px;
+  bottom: calc(100% - 22px);
+  width: 0;
+  border-left: 2px solid var(--graphite);
+}
+
+.stroke[data-stroke='solid'] {
+  border-left-style: solid;
+  border-left-color: var(--route);
+}
+
+.stroke[data-stroke='dashed'] {
+  border-left-style: dashed;
+  border-left-color: var(--caution);
+}
+
+.stroke[data-stroke='dotted'] {
+  border-left-style: dotted;
+  border-left-color: var(--void);
+}
+
+/* A transfer is a cross tick mid-stroke. */
+.stroke[data-transfer='true']::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 40%;
+  width: 10px;
+  height: 0;
+  border-top: 2px solid currentColor;
+}
+
+/* --- the node: filled / hollow / ringed ----------------------------------- */
+.node {
+  align-self: start;
+  justify-self: center;
+  margin-top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--route);
+  background: var(--route);
+  z-index: 1;
+}
+
+.node[data-hollow='true'] {
+  background: var(--paper);
+  border-color: var(--void);
+}
+
+/* Locked: ringed node. */
+.node[data-locked='true'] {
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--ink);
+}
+
+.node[data-pulse='true'] {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.leg {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-label);
+  color: var(--graphite);
+  padding-bottom: var(--space-1);
+}
+
+.legSummary {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.legStatus {
+  font-size: var(--text-data-sm);
+}
+
+.head {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  column-gap: var(--space-3);
+  align-items: baseline;
+}
+
+.time {
+  font-family: var(--font-data);
+  font-size: var(--text-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.time[data-unset='true'] {
+  color: var(--void);
+}
+
+.title {
+  font-weight: 600;
+}
+
+.duration {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  color: var(--graphite);
+}
+
+.lock {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0 var(--space-2);
+}
+
+.violations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.violation {
+  font-size: var(--text-label);
+  color: var(--caution);
+}
+
+.violation::before {
+  content: '⚠ ';
+}
+
+.empty {
+  color: var(--graphite);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node[data-pulse='true'] {
+    animation: none;
+  }
+}

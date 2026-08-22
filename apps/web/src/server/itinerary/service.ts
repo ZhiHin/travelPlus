@@ -171,10 +171,11 @@ export async function addItem(
     const role = await roleFor(tx, day.trip_id, userId)
     if (role === 'VIEWER') return err<ItemRow>({ kind: 'forbidden' })
 
-    const [{ next }] = await tx<{ next: number }[]>`
+    const [nextRow] = await tx<{ next: number }[]>`
       SELECT COALESCE(MAX(ordinal), -1) + 1 AS next FROM itinerary_items
       WHERE trip_day_id = ${dayId} AND deleted_at IS NULL
     `
+    const next = nextRow?.next ?? 0
 
     const id = uuidv7()
     const lockItem = input.lockItem ?? false
@@ -515,9 +516,10 @@ async function writeVersion(
   userId: string,
   label: string,
 ): Promise<number> {
-  const [{ next }] = await tx<{ next: number }[]>`
+  const [nextRow] = await tx<{ next: number }[]>`
     SELECT COALESCE(MAX(version_number), 0) + 1 AS next FROM itinerary_versions WHERE trip_id = ${tripId}
   `
+  const next = nextRow?.next ?? 1
   const days = await tx`
     SELECT d.id, d.local_date, d.ordinal,
            (SELECT json_agg(json_build_object('id', i.id, 'title', i.title, 'ordinal', i.ordinal,
