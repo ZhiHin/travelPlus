@@ -9,6 +9,7 @@ import {
   type ItemKind,
   type ItineraryItem,
   type LegInfo,
+  type DataStatus,
   type Violation,
 } from '@travelplus/domain'
 
@@ -146,6 +147,19 @@ export interface ItemRow {
   readonly ordinal: number
   readonly version: number
   readonly inboundSnapshotId: string | null
+  /** Resolved place, or null when the item has none or it was deleted. */
+  readonly place: { readonly name: string; readonly lat: number; readonly lon: number } | null
+  /**
+   * The leg that arrives here, summarised for display. Null when unrouted — an
+   * absent leg is shown as a gap, never as a guessed duration.
+   */
+  readonly inbound: {
+    readonly status: DataStatus
+    readonly durationSeconds: number
+    readonly transferCount: number
+    readonly walkMeters: number
+    readonly retrievedAt: Date
+  } | null
 }
 
 export async function addItem(
@@ -237,6 +251,14 @@ function rowToItem(r: {
   ordinal: number
   version: number
   inbound_route_snapshot_id: string | null
+  place_name?: string | null
+  place_lat?: number | null
+  place_lon?: number | null
+  leg_status?: DataStatus | null
+  leg_duration?: number | null
+  leg_transfers?: number | null
+  leg_walk?: number | null
+  leg_retrieved_at?: Date | null
 }): ItemRow {
   return {
     id: r.id,
@@ -253,6 +275,23 @@ function rowToItem(r: {
     ordinal: r.ordinal,
     version: r.version,
     inboundSnapshotId: r.inbound_route_snapshot_id,
+    place:
+      r.place_name != null && r.place_lat != null && r.place_lon != null
+        ? { name: r.place_name, lat: r.place_lat, lon: r.place_lon }
+        : null,
+    inbound:
+      r.leg_status != null && r.leg_duration != null && r.leg_retrieved_at != null
+        ? {
+            // A snapshot that was REALTIME when fetched is a prediction that has
+            // since expired. Until the realtime poller lands (Phase 6) nothing
+            // refreshes it, so it is shown as the schedule it was built on.
+            status: r.leg_status === 'REALTIME' ? 'SCHEDULED' : r.leg_status,
+            durationSeconds: r.leg_duration,
+            transferCount: r.leg_transfers ?? 0,
+            walkMeters: r.leg_walk ?? 0,
+            retrievedAt: r.leg_retrieved_at,
+          }
+        : null,
   }
 }
 
@@ -266,10 +305,22 @@ export async function listItems(userId: string, dayId: string): Promise<Result<I
 
 async function itemsForDay(tx: Sql, dayId: string): Promise<ItemRow[]> {
   const rows = await tx<Parameters<typeof rowToItem>[0][]>`
-    SELECT id, trip_day_id, kind, title, place_id, planned_duration_seconds, start_instant,
-           end_instant, lock_time, lock_place, lock_item, ordinal, version,
-           inbound_route_snapshot_id
-    FROM itinerary_items WHERE trip_day_id = ${dayId} AND deleted_at IS NULL ORDER BY ordinal
+    SELECT i.id, i.trip_day_id, i.kind, i.title, i.place_id, i.planned_duration_seconds,
+           i.start_instant, i.end_instant, i.lock_time, i.lock_place, i.lock_item, i.ordinal,
+           i.version, i.inbound_route_snapshot_id,
+           p.canonical_name AS place_name,
+           ST_Y(p.coord::geometry)::float8 AS place_lat,
+           ST_X(p.coord::geometry)::float8 AS place_lon,
+           s.status_at_retrieval AS leg_status,
+           s.total_duration_seconds AS leg_duration,
+           s.transfer_count AS leg_transfers,
+           s.walk_distance_meters AS leg_walk,
+           s.retrieved_at AS leg_retrieved_at
+    FROM itinerary_items i
+    LEFT JOIN places p ON p.id = i.place_id
+    LEFT JOIN route_snapshots s ON s.id = i.inbound_route_snapshot_id
+    WHERE i.trip_day_id = ${dayId} AND i.deleted_at IS NULL
+    ORDER BY i.ordinal
   `
   return rows.map(rowToItem)
 }

@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
@@ -25,21 +21,9 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.itest.ts"
-  ]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "**/*.itest.ts"]
 }

@@ -40,6 +40,10 @@ mkdirSync(dataDir, { recursive: true })
  * There is no Klang-Valley-only extract, so this is trimmed with a bounding box
  * during the OTP build via build-config.json rather than pre-cut.
  */
+/** Klang Valley: west of Port Klang to east of Semenyih, Sepang to Rawang. */
+const BBOX = [101.3, 2.8, 102.0, 3.45]
+const CLIPPED_OSM = 'klang-valley.osm.pbf'
+
 const OSM = {
   url: 'https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf',
   file: 'malaysia-singapore-brunei.osm.pbf',
@@ -102,6 +106,46 @@ async function main() {
   await download(OSM.url, osmPath, 'osm')
   manifest.osm = { ...OSM, checksum: sha256(osmPath), bytes: statSync(osmPath).size }
 
+  // --- Clip to the Klang Valley --------------------------------------------
+  // The Geofabrik extract covers Peninsular Malaysia, Singapore and Brunei:
+  // ~2M ways, which OTP cannot hold in the heap a laptop's Docker VM allows
+  // (observed: 4G heap pinned at 67% of the street graph, GC-bound). OTP's
+  // build config has no OSM bounding box, so the clip happens before OTP sees
+  // the file. osmium comes from Debian's package archive inside the official
+  // debian image — nothing is installed on the host and no third-party image
+  // is trusted with the data directory.
+  const clippedPath = join(dataDir, CLIPPED_OSM)
+  if (!existsSync(clippedPath) || statSync(clippedPath).mtimeMs < statSync(osmPath).mtimeMs) {
+    log(`clipping OSM to ${BBOX.join(',')} with osmium`)
+    const clip = spawnSync(
+      'docker',
+      [
+        'run',
+        '--rm',
+        '-v',
+        `${dataDir}:/data`,
+        'debian:bookworm-slim',
+        'bash',
+        '-c',
+        [
+          'apt-get update -qq >/dev/null 2>&1',
+          'apt-get install -y -qq osmium-tool >/dev/null 2>&1',
+          `osmium extract --overwrite -b ${BBOX.join(',')} -s complete_ways -o /data/${CLIPPED_OSM} /data/${OSM.file}`,
+        ].join(' && '),
+      ],
+      { stdio: 'inherit' },
+    )
+    if (clip.status !== 0) throw new Error(`osmium clip exited ${clip.status}`)
+  } else {
+    log(`clipped OSM is current: ${CLIPPED_OSM}`)
+  }
+  manifest.osmClipped = {
+    file: CLIPPED_OSM,
+    bbox: BBOX,
+    checksum: sha256(clippedPath),
+    bytes: statSync(clippedPath).size,
+  }
+
   // --- GTFS, through the portal budget --------------------------------------
   for (const [i, feed] of FEEDS.entries()) {
     // OTP requires the filename to contain "gtfs" or it silently ignores the
@@ -122,24 +166,19 @@ async function main() {
   }
 
   // --- OTP build config ------------------------------------------------------
-  // Trim the street graph to the Klang Valley. Without this OTP would build a
-  // street network for all of Peninsular Malaysia, Singapore and Brunei.
   writeFileSync(
     join(dataDir, 'build-config.json'),
     JSON.stringify(
       {
-        osm: [{ source: OSM.file }],
+        osm: [{ source: CLIPPED_OSM }],
         transitFeeds: FEEDS.map((f) => ({
           type: 'gtfs',
           source: `${f.id}-gtfs.zip`,
           feedId: f.id,
         })),
-        // Klang Valley bounding box. Anything outside is dropped at build time.
         osmDefaults: { timeZone: 'Asia/Kuala_Lumpur' },
         transitServiceStart: '-P1M',
         transitServiceEnd: 'P6M',
-        // OSM contains far more than the region; bounding reduces memory and time.
-        boundingBox: { minLon: 101.3, minLat: 2.8, maxLon: 102.0, maxLat: 3.45 },
       },
       null,
       2,

@@ -1,0 +1,223 @@
+/*
+ * The canvas: map on one side, the ribbon on the other.
+ *
+ * Below the breakpoint the map sits above and the ribbon scrolls beneath it;
+ * the map is never the only way in, so collapsing it costs nothing a keyboard
+ * user cannot get back from the list (ADR-0018a).
+ */
+
+.canvas {
+  display: grid;
+  grid-template-rows: minmax(240px, 38vh) 1fr;
+  min-height: 100dvh;
+  background: var(--paper);
+}
+
+@media (min-width: 880px) {
+  .canvas {
+    grid-template-rows: 100dvh;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 30rem);
+  }
+}
+
+.mapPane {
+  position: relative;
+  min-height: 0;
+}
+
+.sidePane {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4) calc(var(--target-min) + var(--space-8) * 2);
+  border-top: 1px solid var(--hairline);
+}
+
+@media (min-width: 880px) {
+  .sidePane {
+    border-top: 0;
+    border-left: 1px solid var(--hairline);
+  }
+}
+
+.header {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-display-lg, 2rem);
+  font-weight: 700;
+  font-stretch: 118%;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.notice {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+}
+
+.linkButton {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: var(--target-min);
+}
+
+.days {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block: var(--space-4);
+  scrollbar-width: thin;
+}
+
+.dayTab {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 2px;
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dayTab[aria-current='page'] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.dayOrdinal {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dayDate {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  color: var(--graphite);
+}
+
+.preview {
+  margin-block: var(--space-4);
+  padding: var(--space-4);
+  border: 1px dashed var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--paper-raised);
+}
+
+.previewTitle {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.previewList {
+  margin-top: var(--space-2);
+  padding-left: 1.2em;
+  color: var(--graphite);
+}
+
+.previewList li[data-severity='error'] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.previewActions,
+.detailActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.primary,
+.secondary,
+.danger {
+  min-height: var(--target-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+}
+
+.secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.danger {
+  background: transparent;
+  color: var(--ink);
+  border: 1px dashed var(--graphite);
+}
+
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.detail {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+}
+
+.detailTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detailList {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.detailList dt {
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+
+.detailList dd {
+  color: var(--ink);
+}

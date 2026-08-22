@@ -160,3 +160,16 @@ export function moveItem(ids: readonly string[], itemId: string, toIndex: number
   next.splice(target, 0, itemId)
   return next
 }
+
+/**
+ * Sensible defaults for a day with no stated preferences. Every field is a
+ * value the traveller can override; none is a guess about transit.
+ */
+export const DEFAULT_DAY_CONSTRAINTS: DayConstraints = {
+  earliestStartSeconds: 8 * 3600,
+  latestFinishSeconds: 22 * 3600,
+  bufferSeconds: 10 * 60,
+  minTransferSeconds: 5 * 60,
+  maxWalkMetersPerLeg: 1200,
+  maxWalkMetersPerDay: 8000,
+}
