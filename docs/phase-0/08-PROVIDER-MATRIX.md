@@ -19,6 +19,7 @@ page. Rows not confirmed that way are marked and carry blocking tasks.
 | Geocoding | Public Nominatim via server proxy | No | ✅ | Cache → saved places → manual pin |
 | Routing | Self-hosted OpenTripPlanner 2 | No | ✅ | Walking estimate → manual entry → external deep link |
 | Pilot static GTFS | data.gov.my (Prasarana, KTMB) | **No** | ✅ | Last good feed version, labelled `STALE` |
+| Pilot portal rate limit | data.gov.my — **4 req/min, ALL endpoints** | — | ✅ 2026-08-21 | Shared bucket; staggered polling |
 | Pilot GTFS-RT | data.gov.my vehicle-position | **No** | ✅ **position only** | Scheduled data, labelled `SCHEDULED` |
 | Realtime validation | TriMet (Portland) | static No / RT **yes, free** | ⚠️ | Scheduled path unaffected |
 | Weather | Open-Meteo free tier | No | ✅ | Omit weather entirely; never blocks planning |
@@ -26,7 +27,7 @@ page. Rows not confirmed that way are marked and carry blocking tasks.
 | Feed discovery | Mobility Database | sign-up | ⚠️ | Agency sources directly |
 | AI | Local Ollama | No | ✅ | `AI_UNAVAILABLE`; trip fully usable |
 | Time zones | Local IANA dataset package | No | ❌ | none — must be local, no network call |
-| Pilot data licence | data.gov.my terms | — | ❌ **404** | **Blocks ingestion** |
+| Pilot data licence | data.gov.my — **CC BY 4.0** | — | ✅ 2026-08-21 | Resolved |
 
 ---
 
@@ -219,14 +220,13 @@ Used for discovery only. The authoritative licence for any feed is **the agency'
 
 | Provider | Why | Blocks | Task |
 | --- | --- | --- | --- |
-| **data.gov.my terms / licence** | `data.gov.my/terms`, `/terms-of-use` and `developer.data.gov.my/terms-of-use` all returned **404** | **Phase 3 pilot ingestion** | X-01 |
 | TriMet terms of use | Not on fetched page | Phase 6 realtime | X-02 |
 | Mobility Database terms | Not on fetched page | Phase 8 catalog ops | X-03 |
 | IANA time-zone package | Not fetched | Phase 1 | X-04 |
 | Klang Valley OSM extract source | Not chosen | Phase 3 | X-05 |
 
-`transit_feeds.licence` is `NOT NULL` with no "unknown" value, so X-01 is enforced by the schema:
-the pilot feeds are **structurally un-ingestible** until a human confirms the licence.
+`transit_feeds.licence` is `NOT NULL` with no "unknown" value, so an unverified feed stays
+structurally un-ingestible. X-01 is now **resolved** — see §2.10.
 
 ---
 
@@ -252,3 +252,64 @@ local path.
 7. Attribution renders from stored metadata, so it cannot drift from the data it describes.
 8. **Every provider has a defined fallback** (column 5 of §1). A provider that is down degrades one
    capability; it never makes a saved trip inaccessible.
+
+---
+
+## 2.10 data.gov.my — licence and rate limit ✅ (resolved 2026-08-21)
+
+Fetched from `https://developer.data.gov.my/faq` and `https://developer.data.gov.my/rate-limit`.
+The `/terms` and `/terms-of-use` paths that returned 404 during the Phase 0 sweep were simply the
+wrong URLs — the licence is stated in the developer FAQ.
+
+### Licence
+
+| Property | Verified value |
+| --- | --- |
+| Licence | **Creative Commons Attribution 4.0 International (CC BY 4.0)** |
+| Quoted | "This data is made open under the Creative Commons Attribution 4.0 International License (CC BY 4.0). You can use the data available on our platform for free" |
+| Commercial use | **Permitted** — CC BY 4.0 allows use "for any purpose, even commercially" |
+| Derivative works | **Permitted** — "remix, transform, and build upon the material" |
+| Redistribution | **Permitted** |
+| Attribution required | Creator name, copyright notice, licence notice, link to the material, and an indication of any modifications |
+
+**Why this settles R-17.** Building an OpenTripPlanner graph from a GTFS feed is a derivative work,
+and serving routes computed from it is redistribution of transformed data. CC BY 4.0 permits both
+explicitly, subject to attribution — which the product already renders from
+`transit_feeds.attribution` rather than hard-coding.
+
+**Attribution TravelPlus must render**, covering the CC BY 4.0 elements:
+
+```
+Transit data © Kerajaan Malaysia (data.gov.my), CC BY 4.0.
+Modified: schedules built into a routing graph.
+https://developer.data.gov.my
+```
+
+The "indicate modifications" element is the one easily missed: we do not serve the feed as
+published, we serve routes computed from it.
+
+### Rate limit — the binding constraint on the pilot
+
+| Property | Verified value |
+| --- | --- |
+| Limit | **4 requests per minute** |
+| Scope | **Shared across every endpoint** — Data Catalogue, OpenDOSM, Weather, GTFS Static and GTFS Realtime all draw on one budget |
+| On exceed | `429 Too Many Requests` |
+| API key | Not mentioned as raising the limit |
+| Hour/day caps | Not specified |
+
+Tighter than it first appears, and it shapes Phase 6 more than Phase 3:
+
+- **Static GTFS is unaffected.** Feeds are fetched at ingestion, not per user request — KTMB updates
+  daily and Prasarana "as required".
+- **Realtime is materially constrained.** Vehicle-position feeds refresh every 30 seconds, but
+  polling four Klang Valley agencies at that cadence needs **8 requests/minute — double the budget**.
+  A naive per-feed poller would collect 429s inside the first minute.
+
+**Consequence.** Realtime polling must be staggered across agencies against one shared bucket rather
+than run per feed. `DATA_GOV_MY_BUCKET` implements 4 tokens with a 4/60 per-second refill, and an
+integration test simulates the naive four-agency schedule and asserts a third of it is turned away.
+
+This reinforces ADR-0022 from a second direction: even setting aside that VehiclePosition carries no
+predicted stop times, the portal's budget would not sustain per-agency 30-second polling. The pilot
+ships at scheduled confidence for both reasons.

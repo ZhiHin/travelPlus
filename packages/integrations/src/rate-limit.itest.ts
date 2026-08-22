@@ -176,3 +176,69 @@ describe('termination guarantees', () => {
     expect(slept).toBeLessThan(50) // bounded, not unbounded
   }, 10_000)
 })
+
+/**
+ * data.gov.my publishes a single 4-requests-per-minute budget shared across
+ * every endpoint — Data Catalogue, OpenDOSM, Weather, GTFS Static and GTFS
+ * Realtime all draw on it (verified 2026-08-21).
+ *
+ * This is the binding constraint on the Kuala Lumpur pilot: four agencies polled
+ * every 30 seconds would need 8 req/min, double what the portal allows.
+ */
+describe('data.gov.my — 4 requests per minute, shared', () => {
+  const portal: BucketConfig = {
+    provider: 'itest-datagovmy',
+    refillPerSecond: 4 / 60,
+    maxTokens: 4,
+  }
+
+  it('allows a burst of four', async () => {
+    for (let i = 0; i < 4; i++) {
+      expect((await tryAcquire(dbA, portal, T0)).kind, `request ${i + 1}`).toBe('acquired')
+    }
+  })
+
+  it('refuses the fifth request in the same minute', async () => {
+    for (let i = 0; i < 4; i++) await tryAcquire(dbA, portal, T0)
+    expect((await tryAcquire(dbA, portal, T0)).kind).toBe('wait')
+  })
+
+  it('replenishes one token every fifteen seconds', async () => {
+    for (let i = 0; i < 4; i++) await tryAcquire(dbA, portal, T0)
+    expect((await tryAcquire(dbA, portal, at(14))).kind).toBe('wait')
+    expect((await tryAcquire(dbA, portal, at(15))).kind).toBe('acquired')
+  })
+
+  // The realistic failure: a naive poller hitting four agency feeds every 30
+  // seconds wants 8 requests/minute, double the portal's budget, and would start
+  // collecting 429s.
+  it('refuses a naive four-agency poll at 30-second intervals', async () => {
+    const TICKS = 4
+    const AGENCIES = 4
+    const LAST_TICK_SECONDS = (TICKS - 1) * 30 // 90s elapsed across the window
+
+    let granted = 0
+    let refused = 0
+    for (let tick = 0; tick < TICKS; tick++) {
+      for (let agency = 0; agency < AGENCIES; agency++) {
+        const r = await tryAcquire(dbA, portal, at(tick * 30))
+        if (r.kind === 'acquired') granted++
+        else refused++
+      }
+    }
+
+    // The policy ceiling is the initial burst plus what refills over the elapsed
+    // window — 4 + 90 x (4/60) = 10. The naive schedule asks for 16.
+    const ceiling = portal.maxTokens + LAST_TICK_SECONDS * portal.refillPerSecond
+    expect(granted).toBeLessThanOrEqual(ceiling)
+    expect(granted + refused).toBe(TICKS * AGENCIES)
+    // The point of the test: a third of the naive schedule is turned away.
+    expect(refused).toBeGreaterThanOrEqual(TICKS * AGENCIES - ceiling)
+  })
+
+  it('shares the budget across processes, as the portal counts it', async () => {
+    for (let i = 0; i < 4; i++) await tryAcquire(dbA, portal, T0)
+    // A second process must observe the exhausted budget, not get its own.
+    expect((await tryAcquire(dbB, portal, T0)).kind).toBe('wait')
+  })
+})

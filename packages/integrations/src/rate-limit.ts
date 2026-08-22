@@ -151,3 +151,27 @@ export const NOMINATIM_BUCKET: BucketConfig = {
   refillPerSecond: 1,
   maxTokens: 1,
 }
+
+/**
+ * data.gov.my — 4 requests per minute, verified 2026-08-21.
+ *
+ * The limit is shared across EVERY endpoint on the portal: Data Catalogue,
+ * OpenDOSM, Weather, GTFS Static and GTFS Realtime all draw on the same budget,
+ * and exceeding it returns 429.
+ *
+ * That is the binding constraint on the Kuala Lumpur pilot's realtime design.
+ * The vehicle-position feeds refresh every 30 seconds, but polling four KL
+ * agencies at that cadence would need 8 requests/minute — double what the portal
+ * allows. So realtime polling must be staggered across agencies rather than run
+ * per-feed, and one shared bucket is what makes that enforceable rather than
+ * aspirational.
+ *
+ * A burst of 4 is allowed because the limit is expressed per minute, not per
+ * second: refusing a second request within the same second would be stricter
+ * than the policy requires.
+ */
+export const DATA_GOV_MY_BUCKET: BucketConfig = {
+  provider: 'data.gov.my',
+  refillPerSecond: 4 / 60,
+  maxTokens: 4,
+}

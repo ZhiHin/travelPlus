@@ -69,7 +69,7 @@ genuinely useful — they can drive a "where is my bus right now" map layer — 
 predictions, and labelling them as such would be the precise failure mode `TRUTH-07` exists to
 prevent.
 
-### 2.4 Licensing — not verified ❌ **blocking**
+### 2.4 Licensing — VERIFIED ✅ CC BY 4.0 (2026-08-21)
 
 `data.gov.my/terms`, `data.gov.my/terms-of-use` and `developer.data.gov.my/terms-of-use` all
 returned **HTTP 404** to automated fetches on 2026-08-19. The portal describes itself as

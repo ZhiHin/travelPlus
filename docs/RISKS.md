@@ -23,11 +23,12 @@ phase in which it lands.
 | R-14 | Docker is absent on the development host | 5 | 3 | **15** | 1 |
 | R-15 | Realtime data shown as current when the feed has gone stale | 3 | 5 | **15** | 6 |
 | R-16 | Collaborative edits silently overwrite each other | 2 | 4 | 8 | 7 |
-| R-17 | **Pilot feed licence unverified — ingestion blocked** | 4 | 5 | **20** | 3 |
+| ~~R-17~~ | ~~Pilot feed licence unverified~~ — **RESOLVED 2026-08-21: CC BY 4.0** | — | — | — | — |
 | R-18 | Multi-feed graph fails to link inter-operator transfers, silently | 4 | 4 | **16** | 3 |
 | R-19 | Structured LLM output is best-effort, not guaranteed | 4 | 3 | 12 | 5 |
 | R-20 | Vehicle positions mistaken for predictions | 3 | 5 | **15** | 6 |
 | R-21 | Read-only RLS fixtures hide write-path policy bugs | 4 | 4 | **16** | all |
+| R-22 | data.gov.my caps ALL endpoints at 4 req/min combined | 5 | 3 | **15** | 6 |
 
 ---
 
@@ -340,3 +341,58 @@ that reaches for the migrator connection out of convenience.
 
 **Residual.** The pattern generalises beyond RLS — any test whose setup bypasses the control it is
 verifying has the same blind spot.
+
+---
+
+## R-17 — RESOLVED 2026-08-21
+
+**Was:** the Kuala Lumpur pilot's feed licence could not be verified, and
+`transit_feeds.licence` is `NOT NULL` with a `CHECK` rejecting placeholder values — so the pilot
+feeds were structurally un-ingestible. Scored 20, the highest open risk in the register.
+
+**Resolution.** The licence is stated in the data.gov.my **developer FAQ**, not at `/terms` or
+`/terms-of-use` — the three URLs that returned 404 during the Phase 0 sweep were simply the wrong
+paths. Data is published under **CC BY 4.0**, which permits commercial use, derivative works and
+redistribution, subject to attribution including an indication of modifications.
+
+Building a routing graph from a GTFS feed is exactly the derivative-work case, and serving computed
+routes is redistribution of transformed data. Both are permitted.
+
+**What made this findable.** Nothing clever — a fourth and fifth URL. The Phase 0 sweep gave up
+after three 404s and recorded the gap honestly rather than assuming a permissive licence, which is
+the behaviour that mattered: an assumed licence would have shipped, and a wrong assumed licence
+would have shipped just as quietly.
+
+**Residual.** The schema gate stays exactly as it is. A future feed with an unverified licence
+remains un-ingestible, and that is the point — R-17 is resolved for these feeds, not abolished as a
+class of risk.
+
+---
+
+## R-22 — data.gov.my caps every endpoint at 4 requests per minute, combined
+
+**Status:** Verified 2026-08-21. Discovered while resolving R-17.
+
+**What actually goes wrong.** The obvious realtime design polls each agency feed on its own
+schedule. The vehicle-position feeds refresh every 30 seconds, so four Klang Valley agencies polled
+at that cadence is 8 requests per minute — **double the portal's entire budget**, which is shared
+across Data Catalogue, OpenDOSM, Weather, GTFS Static and GTFS Realtime alike. The portal returns
+`429` and the realtime layer degrades in a way that looks like a feed outage rather than a
+self-inflicted limit.
+
+**Why it is easy to get wrong.** Each individual feed's 30-second refresh cadence *invites* a
+30-second poll. Nothing about the GTFS-RT endpoints signals that they share a budget with an
+unrelated weather API.
+
+**Mitigation.** One shared `DATA_GOV_MY_BUCKET` at 4 tokens with a 4/60 per-second refill, held in
+the same database-backed limiter as Nominatim so it holds across processes. Realtime polling is
+staggered across agencies rather than run per feed. An integration test simulates the naive
+four-agency 30-second schedule and asserts roughly a third of it is refused.
+
+**Second-order effect worth noting.** This reinforces ADR-0022 independently: even if Malaysia
+published TripUpdates tomorrow, the portal's budget would not sustain per-agency 30-second polling
+at the freshness a live badge implies. The pilot ships at scheduled confidence for two separate
+reasons, not one.
+
+**Trigger to watch for.** Any new data.gov.my integration — weather, for instance — that assumes it
+has its own budget.

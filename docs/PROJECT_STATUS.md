@@ -1,7 +1,7 @@
 # Project status
 
 **Last updated:** 2026-08-20
-**Current phase:** Phase 2 — Trip spaces and places, **COMPLETE**. Phase 3 blocked on R-17.
+**Current phase:** Phase 2 — Trip spaces and places, **COMPLETE**. Phase 3 unblocked.
 **Blocking:** none. Docker verified running 2026-08-20 21:43.
 
 ## Phase state
@@ -13,7 +13,7 @@ Per-phase completion records live in [`phases/`](phases/README.md).
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
 | 1 — Foundation | **Complete** — all 8 stories, gate met | `73eb391`…`1d240db` |
 | 2 — Trip spaces and place foundations | **Complete** — gate met | `c82d9c8`…`c8426bc` |
-| 3 — Regional routing (KL pilot) | **Blocked on R-17** — feed licence unverified | — |
+| 3 — Regional routing (KL pilot) | **Unblocked** — licence verified CC BY 4.0 | — |
 | 4–8 | Not started | — |
 
 ## Product name
@@ -120,7 +120,7 @@ link, nav landmark, `aria-current`, roving tabindex, `lang`, and six confidence 
 | ID | Item |
 | --- | --- |
 | ~~X-00~~ | ~~Restart Windows and start Docker~~ — **done 2026-08-20** |
-| X-01 | **Verify the data.gov.my licence** — three URLs returned 404; pilot feeds cannot be ingested until confirmed (R-17) |
+| ~~X-01~~ | ~~Verify the data.gov.my licence~~ — **done 2026-08-21: CC BY 4.0** (R-17 resolved) |
 | X-09 | **Confirm commercial intent** — Open-Meteo's free tier excludes commercial products |
 
 ## Phase completion definition (applies to every phase)
