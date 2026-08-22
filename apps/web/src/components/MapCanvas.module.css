@@ -1,0 +1,109 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  background: var(--paper);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+/* WebGL unavailable or a blocked style URL. A designed state, not an error
+   screen: the itinerary list beside it still carries every fact. */
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  text-align: center;
+  background: color-mix(in srgb, var(--graphite) 8%, var(--paper));
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-floating);
+}
+
+.fallbackTitle {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.fallbackBody {
+  font-size: var(--text-label);
+  color: var(--graphite);
+  max-width: 32ch;
+}
+
+/*
+ * Attribution: always visible, never collapsible.
+ *
+ * The OSMF tile policy requires it clearly on the map, typically bottom-right,
+ * and forbids hiding it behind a toggle or placing it off-screen. Positioned
+ * above the mobile safe area so it is not clipped by a home indicator.
+ */
+.attribution {
+  position: absolute;
+  right: var(--space-2);
+  bottom: max(var(--space-2), env(safe-area-inset-bottom));
+  z-index: 10;
+  margin: 0;
+  padding: 2px var(--space-2);
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  line-height: 1.5;
+  color: var(--graphite);
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-control);
+  max-width: calc(100% - var(--space-4));
+}
+
+.attribution a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.attribution a:hover {
+  color: var(--ink);
+}
+
+/* Markers use the route colour deliberately: they mark verified geometry.
+   That is the one sanctioned use of --route outside a transit fact. */
+.marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--paper);
+  background: var(--route);
+  color: var(--paper);
+  font-family: var(--font-data);
+  font-size: var(--text-data-sm);
+  font-weight: 600;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  transition: transform 140ms var(--ease-map);
+}
+
+.marker[data-selected='true'] {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--route) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker {
+    transition: none;
+  }
+}
