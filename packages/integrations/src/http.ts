@@ -81,6 +81,12 @@ export function isBlockedAddress(ip: string, family: number): boolean {
 export interface SafeFetchOptions {
   /** Hostnames permitted for this call. The primary control. */
   readonly allowedHosts: readonly string[]
+  readonly method?: 'GET' | 'POST'
+  /**
+   * JSON request body. Serialised here rather than by the caller so the
+   * content-type and the payload cannot disagree.
+   */
+  readonly jsonBody?: unknown
   readonly timeoutMs?: number
   readonly maxBytes?: number
   readonly headers?: Record<string, string>
@@ -166,10 +172,13 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions): Prom
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
+    const method = options.method ?? 'GET'
     const response = await doFetch(url.toString(), {
+      method,
       redirect: 'manual',
       signal: controller.signal,
       headers: options.headers ?? {},
+      ...(options.jsonBody !== undefined ? { body: JSON.stringify(options.jsonBody) } : {}),
     })
 
     if (response.status >= 300 && response.status < 400) {
