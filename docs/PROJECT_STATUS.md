@@ -1,8 +1,8 @@
 # Project status
 
-**Last updated:** 2026-08-20
-**Current phase:** Phase 2 — Trip spaces and places, **COMPLETE**. Phase 3 unblocked.
-**Blocking:** none. Docker verified running 2026-08-20 21:43.
+**Last updated:** 2026-08-23
+**Current phase:** Phase 3 — Regional routing, **COMPLETE**. Phase 4 in progress (service, API and canvas done; record pending).
+**Blocking:** none. OTP 2.8.1 serving the Klang Valley graph, healthy, 2026-08-23.
 
 ## Phase state
 
@@ -13,8 +13,9 @@ Per-phase completion records live in [`phases/`](phases/README.md).
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
 | 1 — Foundation | **Complete** — all 8 stories, gate met | `73eb391`…`1d240db` |
 | 2 — Trip spaces and place foundations | **Complete** — gate met | `c82d9c8`…`c8426bc` |
-| 3 — Regional routing (KL pilot) | **Unblocked** — licence verified CC BY 4.0 | — |
-| 4–8 | Not started | — |
+| 3 — Regional routing (KL pilot) | **Complete** — live Komuter ↔ LRT transfer, gate met | `f916a5c`…close |
+| 4 — Itinerary editor | In progress — scheduler, constraints, API, canvas done | `d7bb2d8`…`954e340` |
+| 5–8 | Not started | — |
 
 ## Product name
 

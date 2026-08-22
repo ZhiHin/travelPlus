@@ -183,7 +183,7 @@ function normalizeLeg(leg: OtpLeg, context: NormalizeContext): RouteLeg {
       arrival: new Date(leg.endTime - (leg.arrivalDelay ?? 0) * 1000),
     },
     geometry,
-    feedId: context.feeds[0]?.feedId ?? context.routerRegion,
+    feedId: feedIdFor(leg.route?.agency?.gtfsId, context),
     ...optional('routeShortName', leg.route?.shortName),
     ...optional('routeLongName', leg.route?.longName),
     ...optional('routeColor', leg.route?.color),
@@ -194,6 +194,25 @@ function normalizeLeg(leg: OtpLeg, context: NormalizeContext): RouteLeg {
   }
 
   return transit
+}
+
+/**
+ * Which feed served this leg.
+ *
+ * OTP scopes every GTFS identifier as `<feedId>:<id>`, so the agency id names
+ * the feed directly. A multi-feed graph (Komuter plus LRT) would otherwise have
+ * every leg stamped with whichever feed happened to be listed first — a
+ * provenance error the live cross-operator test exists to catch.
+ */
+function feedIdFor(agencyGtfsId: string | null | undefined, context: NormalizeContext): string {
+  const colon = agencyGtfsId?.indexOf(':') ?? -1
+  if (agencyGtfsId && colon > 0) {
+    const id = agencyGtfsId.slice(0, colon)
+    // Only trust an id that names a feed we configured; anything else is a
+    // router we do not understand, and the region is the honest answer.
+    if (context.feeds.some((f) => f.feedId === id)) return id
+  }
+  return context.feeds.length === 1 ? context.feeds[0]!.feedId : context.routerRegion
 }
 
 /**

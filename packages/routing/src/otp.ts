@@ -43,6 +43,12 @@ export type RouteOutcome =
 export interface OtpDeps {
   readonly baseUrl: string
   readonly routerRegion: string
+  /**
+   * IANA zone the router was built in. OTP reads `date` and `time` in this
+   * zone, so an instant must be converted before it is sent — a UTC string
+   * would plan a 09:00 Kuala Lumpur departure at 01:00 local, when nothing runs.
+   */
+  readonly routerZone: string
   readonly feeds: readonly FeedRef[]
   /** Whether any backing feed publishes TripUpdates (ADR-0022). */
   readonly feedsSupportTripUpdates: boolean
@@ -96,6 +102,25 @@ query Plan(
   }
 }`
 
+/** Split an instant into the `YYYY-MM-DD` and `HH:MM:SS` OTP expects, in `zone`. */
+export function localDateTime(instant: Date, zone: string): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: zone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(instant)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    time: `${get('hour')}:${get('minute')}:${get('second')}`,
+  }
+}
+
 interface GraphQlResponse {
   data?: { plan?: { itineraries?: OtpItinerary[] | null } | null } | null
   errors?: { message?: string }[]
@@ -124,8 +149,7 @@ export function createOtpClient(deps: OtpDeps): OtpClient {
         toLat: query.to.lat,
         toLon: query.to.lon,
         // OTP wants local date and time strings for the router's own zone.
-        date: when.toISOString().slice(0, 10),
-        time: when.toISOString().slice(11, 19),
+        ...localDateTime(when, deps.routerZone),
         arriveBy: query.arriveBy !== undefined,
         modes: (query.modes ?? ['WALK', 'TRANSIT']).map((m) => ({ mode: m })),
         maxWalkDistance: query.maxWalkMeters ?? 2000,
@@ -137,6 +161,8 @@ export function createOtpClient(deps: OtpDeps): OtpClient {
       try {
         const response = await safeFetch(new URL('/otp/gtfs/v1', deps.baseUrl).toString(), {
           allowedHosts: [host],
+          // OTP is ours and lives on the internal network by design.
+          allowPrivateAddresses: true,
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           jsonBody: { query: PLAN_QUERY, variables },

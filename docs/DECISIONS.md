@@ -572,3 +572,55 @@ VT-x is already on, so the firmware blocker anticipated in the Phase 0 backlog d
 Installing WSL 2 does require **administrator elevation and a system restart**, per Microsoft's
 current documentation retrieved 2026-08-20, which makes it a stop condition under the agreed blocker
 policy rather than something to perform unattended.
+
+## ADR-0026 — First-party services opt in to private addresses; the SSRF default stays closed
+
+**Status:** Accepted · 2026-08-23
+
+**Context.** `safeFetch` refuses any hostname that resolves to a private or loopback range. That is
+the control that stops a third-party provider's DNS from steering a request at the database or the
+Docker socket. The OTP router, however, is ours and lives on the internal network *by design* —
+`http://otp:8080` in Compose, `127.0.0.1:8080` on a developer's machine. The first live routing
+test was blocked by our own SSRF guard.
+
+**Options.**
+
+1. Bypass `safeFetch` for OTP and call `fetch` directly — loses the timeout, size cap, redirect
+   refusal and host allow-list for the one service that handles the most user-controlled input
+   (coordinates).
+2. Relax the private-range check globally — defeats the control.
+3. An explicit per-call `allowPrivateAddresses` flag that relaxes **only** the address check, with
+   the host allow-list still failing closed.
+
+**Decision.** Option 3. The flag is documented at its declaration as being for first-party services
+only (OTP now; Ollama in Phase 5). A third-party adapter setting it is a review failure. Three unit
+tests pin that the default is closed, the opt-in admits loopback, and a non-allow-listed host is
+refused even with the opt-in.
+
+**Consequences.** Every outbound call, internal or external, goes through one client with one
+timeout policy and one size cap. The blast radius of the opt-in is exactly the address check.
+
+## ADR-0027 — Clip OSM before OTP reads it; use Debian's osmium inside the official image
+
+**Status:** Accepted · 2026-08-23
+
+**Context.** OTP's build config has no OSM bounding box. The smallest Geofabrik extract covering
+Kuala Lumpur is Malaysia + Singapore + Brunei: 238 MB, ~1.95 M ways. The first build ran 26 minutes
+to 67 % of the street graph and then stalled GC-bound at a 4 GB heap inside a 7.6 GB Docker VM.
+
+**Options.**
+
+1. Give Docker more memory via `.wslconfig` — a host-level change that restarts every container on
+   the machine, including other projects'; outside the spirit of the authorisation.
+2. Install `osmium-tool` on the host — not project-scoped software.
+3. Use a community osmium image — the best-starred has three stars; none is from a known maintainer,
+   and it would be bind-mounted over the data directory.
+4. Run `apt-get install osmium-tool` inside the official `debian:bookworm-slim` image as a build
+   step.
+
+**Decision.** Option 4. The clip (238 MB → 47 MB; 20 M+ nodes → 5.4 M) reduced the full graph build
+from "did not finish" to 2m01s. It is a step in `build-graph.mjs`, rerun only when the raw extract's
+mtime changes, and recorded in `manifest.json` with the bbox and a checksum.
+
+**Consequences.** Stops outside the bbox (Komuter beyond Rawang, Seremban, Tanjung Malim) exist in
+the transit graph but are not street-linked. This is stated in PHASE-3 §6 rather than hidden.

@@ -1,6 +1,6 @@
 # Risk register
 
-**Last updated:** 2026-08-19 (Phase 0)
+**Last updated:** 2026-08-23 (Phase 3)
 
 Severity = Likelihood × Impact on a 1–5 scale. Anything scoring ≥ 12 is a gate blocker for the
 phase in which it lands.
@@ -29,6 +29,7 @@ phase in which it lands.
 | R-20 | Vehicle positions mistaken for predictions | 3 | 5 | **15** | 6 |
 | R-21 | Read-only RLS fixtures hide write-path policy bugs | 4 | 4 | **16** | all |
 | R-22 | data.gov.my caps ALL endpoints at 4 req/min combined | 5 | 3 | **15** | 6 |
+| R-23 | KTMB feed types Komuter as tram (route_type 0); UI label follows the feed | 5 | 2 | 10 | 8 |
 
 ---
 
@@ -396,3 +397,21 @@ reasons, not one.
 
 **Trigger to watch for.** Any new data.gov.my integration — weather, for instance — that assumes it
 has its own budget.
+
+## R-23 — The KTMB feed types Komuter trains as trams
+
+**Status:** Observed 2026-08-23 on the live Klang Valley graph.
+
+**What actually goes wrong.** The KTMB GTFS static feed publishes its Komuter routes with
+`route_type 0` (tram, streetcar, light rail). OTP therefore reports the mode as `TRAM`, and the
+normalizer passes it through unchanged. A user could see "tram" beside a Komuter leg.
+
+**Why we do not fix it in code.** Substituting `RAIL` by agency name would be a silent correction of
+feed data — precisely the pattern the product forbids for transport facts. If the feed is wrong,
+the feed is wrong, and the fix belongs upstream.
+
+**Mitigation.** Phase 8's region catalog may carry a per-feed *display label* override that is
+visibly a TravelPlus annotation ("KTM Komuter"), distinct from the mode the feed declared. The
+normalized route keeps the feed's value. Report the typing upstream to data.gov.my.
+
+**Owner phase.** 8.

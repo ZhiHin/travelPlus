@@ -92,6 +92,13 @@ export interface SafeFetchOptions {
   readonly headers?: Record<string, string>
   /** Injected so tests do not depend on real DNS. */
   readonly resolve?: (host: string) => Promise<{ address: string; family: number }[]>
+  /**
+   * Permit private and loopback addresses. Only for first-party services that
+   * are SUPPOSED to live on the internal network (the OTP router, Ollama). A
+   * third-party provider must never set this: the private-range check exists
+   * precisely so a provider's DNS cannot steer a request inward.
+   */
+  readonly allowPrivateAddresses?: boolean
   readonly fetchImpl?: typeof fetch
 }
 
@@ -107,6 +114,7 @@ export async function assertSafeUrl(
   rawUrl: string,
   allowedHosts: readonly string[],
   resolver: (host: string) => Promise<{ address: string; family: number }[]> = defaultResolve,
+  allowPrivateAddresses = false,
 ): Promise<URL> {
   let url: URL
   try {
@@ -139,7 +147,7 @@ export async function assertSafeUrl(
   }
 
   for (const { address, family } of addresses) {
-    if (isBlockedAddress(address, family)) {
+    if (!allowPrivateAddresses && isBlockedAddress(address, family)) {
       throw new SsrfBlockedError(`"${url.hostname}" resolves to blocked address ${address}`)
     }
   }
@@ -166,7 +174,12 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions): Prom
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES
   const doFetch = options.fetchImpl ?? fetch
 
-  const url = await assertSafeUrl(rawUrl, options.allowedHosts, options.resolve)
+  const url = await assertSafeUrl(
+    rawUrl,
+    options.allowedHosts,
+    options.resolve,
+    options.allowPrivateAddresses ?? false,
+  )
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)

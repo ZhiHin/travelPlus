@@ -1,4 +1,4 @@
-import type { FeedRef, TransitLeg } from '@travelplus/domain'
+﻿import { isTransitLeg, type FeedRef, type TransitLeg } from '@travelplus/domain'
 import { describe, expect, it } from 'vitest'
 import {
   MalformedRouteError,
@@ -12,7 +12,7 @@ import {
  * Contract tests against captured OTP shapes.
  *
  * No running OTP is required, which is the CI rule that shapes everything
- * (testing strategy §3): a test needing a live provider is a test that will
+ * (testing strategy Â§3): a test needing a live provider is a test that will
  * eventually be skipped, and a skipped test is how a phase gate gets passed
  * dishonestly.
  *
@@ -28,7 +28,7 @@ const PRASARANA: FeedRef = {
   feedVersion: '2026-08-01',
   agency: 'Prasarana',
   licence: 'CC BY 4.0',
-  attribution: 'Transit data © Kerajaan Malaysia (data.gov.my), CC BY 4.0',
+  attribution: 'Transit data Â© Kerajaan Malaysia (data.gov.my), CC BY 4.0',
 }
 
 function ctx(over: Partial<NormalizeContext> = {}): NormalizeContext {
@@ -124,7 +124,7 @@ describe('a well-formed itinerary', () => {
     const three = itinerary({
       legs: [...itinerary().legs!, { ...itinerary().legs![1]! }, { ...itinerary().legs![1]! }],
     })
-    // Three transit legs → two transfers.
+    // Three transit legs â†’ two transfers.
     expect(normalizeItinerary(three, ctx()).transferCount).toBe(2)
   })
 })
@@ -216,7 +216,7 @@ describe('accessibility distinguishes unknown from inaccessible', () => {
 /**
  * ADR-0022 at the normalization boundary. OTP sets `realTime: true` for any
  * applied realtime data, but a vehicle-position-only feed carries no predicted
- * stop times — so the flag alone must not manufacture a departure prediction.
+ * stop times â€” so the flag alone must not manufacture a departure prediction.
  */
 describe('the pilot cannot produce a realtime prediction', () => {
   it('omits realtime when no feed publishes TripUpdates, even if OTP flagged it', () => {
@@ -364,5 +364,46 @@ describe('mode mapping', () => {
       shaped.legs![0]!.mode = otpMode
       expect(normalizeItinerary(shaped, ctx()).legs[0]!.kind).toBe(expected)
     }
+  })
+})
+
+describe('feed attribution per leg', () => {
+  const KTMB: FeedRef = {
+    feedId: 'ktmb',
+    feedVersion: '2026-08-01',
+    agency: 'Keretapi Tanah Melayu',
+    licence: 'CC BY 4.0',
+    attribution: 'Transit data Â© Kerajaan Malaysia (data.gov.my), CC BY 4.0',
+  }
+
+  function transitLeg(agencyGtfsId: string) {
+    const base = itinerary().legs[1]!
+    return { ...base, route: { ...base.route, agency: { name: 'x', gtfsId: agencyGtfsId } } }
+  }
+
+  // The live Komuter -> LRT journey stamped every leg 'prasarana-rapid-rail-kl'
+  // before this: the first configured feed, not the one that ran the train.
+  it('derives the feed from the scoped agency id in a multi-feed graph', () => {
+    const route = normalizeItinerary(
+      itinerary({
+        legs: [transitLeg('ktmb:ktmb'), transitLeg('prasarana-rapid-rail-kl:rapidrail')],
+      }),
+      ctx({ feeds: [PRASARANA, KTMB] }),
+    )
+    const feeds = route.legs.filter(isTransitLeg).map((l) => l.feedId)
+    expect(feeds).toEqual(['ktmb', 'prasarana-rapid-rail-kl'])
+  })
+
+  it('falls back to the only configured feed when the id is unscoped', () => {
+    const route = normalizeItinerary(itinerary({ legs: [transitLeg('prasarana')] }), ctx())
+    expect(route.legs.filter(isTransitLeg)[0]!.feedId).toBe('prasarana-rapid-rail-kl')
+  })
+
+  it('names the region, not a guess, when the id matches no configured feed', () => {
+    const route = normalizeItinerary(
+      itinerary({ legs: [transitLeg('mystery:agency')] }),
+      ctx({ feeds: [PRASARANA, KTMB] }),
+    )
+    expect(route.legs.filter(isTransitLeg)[0]!.feedId).toBe('klang-valley')
   })
 })

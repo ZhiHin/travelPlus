@@ -66,9 +66,16 @@ services:
       # Graph inputs and the built graph.obj. Gitignored — reproducible from the
       # recorded feed URLs and checksums, and licence-encumbered.
       - ./infra/otp/data:/var/opentripplanner
-    command: ['--load', '--serve', '/var/opentripplanner']
+    # The image entrypoint appends /var/opentripplanner itself; naming it again
+    # gives OTP two directories and it refuses to start.
+    command: ['--load', '--serve']
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/otp/actuators/health || exit 1']
+      # The actuator endpoint is off by default; probe the API we actually use.
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- --post-data="{\"query\":\"{feeds{feedId}}\"}" --header="Content-Type: application/json" http://localhost:8080/otp/gtfs/v1 | grep -q feedId || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 30

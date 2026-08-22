@@ -215,3 +215,25 @@ describe('safeFetch', () => {
     expect(spy).not.toHaveBeenCalled()
   })
 })
+
+describe('allowPrivateAddresses — first-party services only', () => {
+  const loopback = async () => [{ address: '127.0.0.1', family: 4 }]
+
+  it('is off by default: loopback is blocked', async () => {
+    await expect(assertSafeUrl('http://otp.internal/', ['otp.internal'], loopback)).rejects.toThrow(
+      SsrfBlockedError,
+    )
+  })
+
+  it('permits loopback when explicitly opted in', async () => {
+    const url = await assertSafeUrl('http://otp.internal/', ['otp.internal'], loopback, true)
+    expect(url.hostname).toBe('otp.internal')
+  })
+
+  // The opt-in relaxes the address check, never the allow-list.
+  it('still refuses a host that is not allow-listed', async () => {
+    await expect(
+      assertSafeUrl('http://evil.internal/', ['otp.internal'], loopback, true),
+    ).rejects.toThrow(SsrfBlockedError)
+  })
+})
