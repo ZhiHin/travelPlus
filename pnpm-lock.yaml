@@ -44,6 +44,9 @@ importers:
       '@travelplus/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@travelplus/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0

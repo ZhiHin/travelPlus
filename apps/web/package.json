@@ -13,6 +13,7 @@
     "@travelplus/config": "workspace:*",
     "@travelplus/db": "workspace:*",
     "@travelplus/domain": "workspace:*",
+    "@travelplus/integrations": "workspace:*",
     "maplibre-gl": "^5.24.0",
     "next": "^15.5.23",
     "react": "^19.2.8",
