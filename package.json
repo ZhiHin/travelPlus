@@ -23,7 +23,9 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
-    "db:reset": "docker compose down -v && docker compose up -d postgres"
+    "db:reset": "docker compose down -v && docker compose up -d postgres",
+    "otp:build": "node infra/otp/build-graph.mjs",
+    "otp:serve": "docker compose --profile routing up -d otp"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

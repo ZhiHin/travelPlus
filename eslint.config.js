@@ -111,6 +111,7 @@ export default tseslint.config(
       'packages/ai/**/*.ts',
       '**/*.itest.ts',
       '*.config.{ts,js,mjs}',
+      'infra/**/*.mjs',
     ],
     languageOptions: {
       globals: {
