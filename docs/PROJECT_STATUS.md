@@ -1,7 +1,7 @@
 # Project status
 
 **Last updated:** 2026-08-20
-**Current phase:** Phase 1 — Foundation, **COMPLETE**. Phase 2 next.
+**Current phase:** Phase 2 — Trip spaces and places, **COMPLETE**. Phase 3 blocked on R-17.
 **Blocking:** none. Docker verified running 2026-08-20 21:43.
 
 ## Phase state
@@ -12,7 +12,9 @@ Per-phase completion records live in [`phases/`](phases/README.md).
 | --- | --- | --- |
 | 0 — Discovery and specification | **Complete, approved, pushed** | `3fc8743` |
 | 1 — Foundation | **Complete** — all 8 stories, gate met | `73eb391`…`1d240db` |
-| 2–8 | Not started | — |
+| 2 — Trip spaces and place foundations | **Complete** — gate met | `c82d9c8`…`c8426bc` |
+| 3 — Regional routing (KL pilot) | **Blocked on R-17** — feed licence unverified | — |
+| 4–8 | Not started | — |
 
 ## Product name
 

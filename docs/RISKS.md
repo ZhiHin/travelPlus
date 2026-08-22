@@ -27,6 +27,7 @@ phase in which it lands.
 | R-18 | Multi-feed graph fails to link inter-operator transfers, silently | 4 | 4 | **16** | 3 |
 | R-19 | Structured LLM output is best-effort, not guaranteed | 4 | 3 | 12 | 5 |
 | R-20 | Vehicle positions mistaken for predictions | 3 | 5 | **15** | 6 |
+| R-21 | Read-only RLS fixtures hide write-path policy bugs | 4 | 4 | **16** | all |
 
 ---
 
@@ -311,3 +312,31 @@ occupancy, and excludes predicted stop times (verified against the GTFS-Realtime
 positions ship as an explicitly labelled position-only map layer. This is the same class of error as
 R-02 — confident wrongness — arriving through the infrastructure layer rather than through the model,
 which is exactly why it needed its own control.
+
+---
+
+## R-21 — Read-only RLS fixtures hide write-path policy bugs
+
+**Status:** Confirmed by an actual escape, not hypothetical. Phase 1 shipped with 22 passing RLS
+tests and an INSERT policy on `trips` that no user could satisfy. No trip could be created at all,
+and the gate passed.
+
+**What actually goes wrong.** RLS fixtures get seeded through the migrator role, because that is the
+convenient way to set up state. The migrator owns the tables and therefore bypasses RLS entirely.
+The suite then exercises cross-user **reads** thoroughly and the authenticated **write** path not at
+all — proving the policies keep the wrong people out, and never that they let the right people in.
+
+**Why it is easy to miss.** Every test passes. Coverage looks complete. The gap is invisible
+precisely *because* the fixtures work: a role that bypasses the mechanism under test will never
+report that the mechanism is broken.
+
+**Mitigation.** Any migration that adds or alters a policy needs at least one test that writes **as
+`travelplus_app`, under policy** — not merely reads. `packages/db/src/rls.itest.ts` now has a
+dedicated section for this (RLS test 11), including that a user cannot forge a row owned by someone
+else and cannot add themselves to a trip they do not own.
+
+**Trigger to watch for.** A new table with RLS whose tests only `SELECT`. Also: any fixture setup
+that reaches for the migrator connection out of convenience.
+
+**Residual.** The pattern generalises beyond RLS — any test whose setup bypasses the control it is
+verifying has the same blind spot.

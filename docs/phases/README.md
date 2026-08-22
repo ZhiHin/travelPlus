@@ -8,7 +8,7 @@ deliberate limitations, and the verification commands with their actual exit cod
 | --- | --- | --- |
 | 0 — Discovery and specification | [`../phase-0/00-COMPLETION-REPORT.md`](../phase-0/00-COMPLETION-REPORT.md) | Complete |
 | 1 — Foundation | [`PHASE-1.md`](PHASE-1.md) | Complete |
-| 2 — Trip spaces and place foundations | — | Not started |
+| 2 — Trip spaces and place foundations | [`PHASE-2.md`](PHASE-2.md) | Complete |
 | 3 — Regional routing (KL pilot) | — | Not started |
 | 4 — Itinerary editor | — | Not started |
 | 5 — AI planner | — | Not started |
