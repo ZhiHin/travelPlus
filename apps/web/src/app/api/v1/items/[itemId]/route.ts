@@ -4,7 +4,9 @@ import {
   jsonBody,
   mapItineraryError,
   requireVersion,
+  routingDeps,
 } from '../../../../../server/itinerary/http.js'
+import { routeBoundaries } from '../../../../../server/itinerary/routing.js'
 import { removeItem, setLocks } from '../../../../../server/itinerary/service.js'
 
 /**
@@ -55,5 +57,17 @@ export async function DELETE(request: Request, { params }: Params) {
 
   const result = await removeItem(guarded.actor.userId, itemId, version)
   if (!result.ok) return mapItineraryError(result.error)
-  return NextResponse.json(result.value)
+
+  // Removing b from a,b,c creates one new adjacency a->c.
+  const routed =
+    result.value.affectedBoundaries.length > 0 && typeof parsed.body.dayId === 'string'
+      ? await routeBoundaries(
+          routingDeps(),
+          guarded.actor.userId,
+          parsed.body.dayId,
+          result.value.affectedBoundaries,
+          new Date(),
+        )
+      : []
+  return NextResponse.json({ ...result.value, routed })
 }

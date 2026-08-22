@@ -35,6 +35,10 @@ const stranger = uuidv7()
 const viewer = uuidv7()
 
 /** Klang Valley, roughly. Matches the pilot region seeded below. */
+// A synthetic region in the South Atlantic, so the fixture never overlaps the
+// real Klang Valley seed (migration 0006) and the containment query is
+// unambiguous. The feed facts mirror the pilot's: positions, no trip updates.
+const SYNTHETIC = { name: 'Synthetic City', lat: -39.5, lon: -19.5, ianaZone: 'Etc/UTC' }
 const KL = { name: 'Kuala Lumpur', lat: 3.139, lon: 101.6869, ianaZone: 'Asia/Kuala_Lumpur' }
 /** Somewhere with no region installed at all. */
 const NOWHERE = { name: 'Bouvet Island', lat: -54.42, lon: 3.36 }
@@ -58,8 +62,8 @@ beforeAll(async () => {
   // configuration.
   await sql.unsafe(`
     INSERT INTO routing_regions (id, slug, display_name, otp_router_id, bbox, status, coverage_tier)
-    VALUES ('${klRegionId}', 'klang-valley-itest', 'Klang Valley', 'klang-valley',
-            ST_SetSRID(ST_MakeEnvelope(101.3, 2.8, 102.0, 3.4), 4326)::geography,
+    VALUES ('${klRegionId}', 'synthetic-itest', 'Synthetic City', 'synthetic',
+            ST_SetSRID(ST_MakeEnvelope(-20.0, -40.0, -19.0, -39.0), 4326)::geography,
             'ACTIVE', 'T2');
 
     INSERT INTO transit_feeds
@@ -144,9 +148,9 @@ describe('creating a trip', () => {
  * than a lookup table.
  */
 describe('coverage tier resolution', () => {
-  it('derives T2 for the pilot region — schedules but no trip updates', async () => {
-    const trip = await newTrip('KL trip')
-    const added = await addDestination(owner, trip.id, KL, NOW)
+  it('derives T2 for a region with schedules but no trip updates', async () => {
+    const trip = await newTrip('Synthetic trip')
+    const added = await addDestination(owner, trip.id, SYNTHETIC, NOW)
     expect(added.ok).toBe(true)
     if (!added.ok) return
 
@@ -163,9 +167,19 @@ describe('coverage tier resolution', () => {
     expect(added.value.coverageTier).toBe('T0')
   })
 
+  // The real pilot, from the seeded catalog (migration 0006): four feeds, all
+  // positions-only, Rapid Rail valid to 2026-12-31. T2, and never T3.
+  it('derives T2 for Kuala Lumpur from the seeded Klang Valley catalog', async () => {
+    const trip = await newTrip('KL trip')
+    const added = await addDestination(owner, trip.id, KL, NOW)
+    expect(added.ok).toBe(true)
+    if (!added.ok) return
+    expect(added.value.coverageTier).toBe('T2')
+  })
+
   it('stores the tier server-side on the destination row', async () => {
     const trip = await newTrip('Stored tier')
-    await addDestination(owner, trip.id, KL, NOW)
+    await addDestination(owner, trip.id, SYNTHETIC, NOW)
     const [row] = await systemDb()<{ coverage_tier: string }[]>`
       SELECT coverage_tier FROM trip_destinations WHERE trip_id = ${trip.id}
     `

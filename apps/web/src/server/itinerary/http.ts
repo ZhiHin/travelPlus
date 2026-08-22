@@ -1,5 +1,7 @@
+import { loadEnv } from '@travelplus/config'
 import type { NextResponse } from 'next/server'
 import { mapTripError, problem } from '../http/context.js'
+import type { RoutingDeps } from './routing.js'
 import type { ItineraryError } from './service.js'
 
 /**
@@ -39,4 +41,9 @@ export function requireVersion(body: Record<string, unknown>): number | NextResp
     })
   }
   return v
+}
+
+/** Routing dependencies from validated config. Read here, not in the service, so the service is testable without secrets. */
+export function routingDeps(): RoutingDeps {
+  return { otpBaseUrl: loadEnv().OTP_BASE_URL }
 }

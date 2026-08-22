@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server'
 import { guard, problem } from '../../../../../../../server/http/context.js'
-import { jsonBody, mapItineraryError } from '../../../../../../../server/itinerary/http.js'
+import {
+  jsonBody,
+  mapItineraryError,
+  routingDeps,
+} from '../../../../../../../server/itinerary/http.js'
+import { routeBoundaries } from '../../../../../../../server/itinerary/routing.js'
 import { commitMove } from '../../../../../../../server/itinerary/service.js'
 
-/** `/api/v1/days/{dayId}/reorder/commit` — bind the commit to a preview token. */
+/**
+ * `/api/v1/days/{dayId}/reorder/commit` — bind the commit to a preview token.
+ *
+ * After the order is written, only the boundaries the preview reported are
+ * routed (BR-I6: at most four). Routing failures are returned per boundary,
+ * not hidden: the order is saved either way, and an unrouted leg is a gap.
+ */
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +34,16 @@ export async function POST(request: Request, { params }: Params) {
     })
   }
 
-  const result = await commitMove(guarded.actor.userId, previewToken, new Date())
+  const now = new Date()
+  const result = await commitMove(guarded.actor.userId, previewToken, now)
   if (!result.ok) return mapItineraryError(result.error)
-  return NextResponse.json(result.value)
+
+  const routed = await routeBoundaries(
+    routingDeps(),
+    guarded.actor.userId,
+    result.value.dayId,
+    result.value.affectedBoundaries,
+    now,
+  )
+  return NextResponse.json({ ...result.value, routed })
 }

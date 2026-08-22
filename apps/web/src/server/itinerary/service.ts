@@ -405,7 +405,13 @@ export interface ReorderPreview {
 
 const previews = new Map<
   string,
-  { dayId: string; order: string[]; dayVersion: number; at: number }
+  {
+    dayId: string
+    order: string[]
+    boundaries: readonly { from: string; to: string }[]
+    dayVersion: number
+    at: number
+  }
 >()
 const PREVIEW_TTL_MS = 5 * 60_000
 
@@ -462,7 +468,7 @@ export async function previewMove(
         fromItemId: from,
         toItemId: to,
         durationSeconds: isNew ? null : legDurationFromSnapshot(toItem),
-        walkMeters: 0,
+        walkMeters: isNew ? 0 : (toItem.inbound?.walkMeters ?? 0),
         snapshotId: isNew ? null : toItem.inboundSnapshotId,
         status: isNew ? 'PENDING' : toItem.inboundSnapshotId ? 'ROUTED' : 'UNAVAILABLE',
       })
@@ -495,7 +501,13 @@ export async function previewMove(
     })
 
     const previewToken = uuidv7()
-    previews.set(previewToken, { dayId, order: after, dayVersion: day.version, at: now.getTime() })
+    previews.set(previewToken, {
+      dayId,
+      order: after,
+      boundaries,
+      dayVersion: day.version,
+      at: now.getTime(),
+    })
 
     return ok<ReorderPreview>({
       previewToken,
@@ -518,7 +530,14 @@ export async function commitMove(
   userId: string,
   previewToken: string,
   now: Date,
-): Promise<Result<{ order: readonly string[]; versionNumber: number }>> {
+): Promise<
+  Result<{
+    order: readonly string[]
+    versionNumber: number
+    dayId: string
+    affectedBoundaries: readonly { from: string; to: string }[]
+  }>
+> {
   const preview = previews.get(previewToken)
   if (!preview || now.getTime() - preview.at > PREVIEW_TTL_MS) {
     previews.delete(previewToken)
@@ -542,7 +561,12 @@ export async function commitMove(
     const versionNumber = await writeVersion(tx, day.trip_id, userId, 'reorder')
 
     previews.delete(previewToken)
-    return ok({ order: preview.order, versionNumber })
+    return ok({
+      order: preview.order,
+      versionNumber,
+      dayId: preview.dayId,
+      affectedBoundaries: preview.boundaries,
+    })
   })
 }
 
@@ -604,9 +628,7 @@ export async function listVersions(
   })
 }
 
-function legDurationFromSnapshot(_item: ItemRow): number | null {
-  // Snapshot durations are joined in the route service; the preview uses the
-  // presence of a snapshot id as "routed" and leaves the exact duration to the
-  // caller that owns snapshot loading. A null here is a gap, never a guess.
-  return null
+function legDurationFromSnapshot(item: ItemRow): number | null {
+  // Joined from route_snapshots by itemsForDay. Null is a gap, never a guess.
+  return item.inbound?.durationSeconds ?? null
 }

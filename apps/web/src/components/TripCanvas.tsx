@@ -218,6 +218,7 @@ export function TripCanvas({ tripId, mapStyleUrl }: { tripId: string; mapStyleUr
     async (item: Item) => {
       const r = await api<{ affectedBoundaries: unknown[] }>('DELETE', `/api/v1/items/${item.id}`, {
         version: item.version,
+        dayId,
       })
       if (!r.ok) setNotice(r.error.message)
       else if (r.value.affectedBoundaries.length > 0) {

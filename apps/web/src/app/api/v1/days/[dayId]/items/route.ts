@@ -1,7 +1,12 @@
 import { ITEM_KINDS, type ItemKind } from '@travelplus/domain'
 import { NextResponse } from 'next/server'
 import { guard, problem } from '../../../../../../server/http/context.js'
-import { jsonBody, mapItineraryError } from '../../../../../../server/itinerary/http.js'
+import {
+  jsonBody,
+  mapItineraryError,
+  routingDeps,
+} from '../../../../../../server/itinerary/http.js'
+import { routeBoundaries } from '../../../../../../server/itinerary/routing.js'
 import { addItem, listItems } from '../../../../../../server/itinerary/service.js'
 
 /** `/api/v1/days/{dayId}/items` — list, and append to the end of the day. */
@@ -63,5 +68,22 @@ export async function POST(request: Request, { params }: Params) {
     ...(typeof input.notes === 'string' ? { notes: input.notes } : {}),
   })
   if (!result.ok) return mapItineraryError(result.error)
-  return NextResponse.json(result.value, { status: 201 })
+
+  // Appending creates exactly one new adjacency: previous item -> this one.
+  const now = new Date()
+  const list = await listItems(guarded.actor.userId, dayId)
+  const items = list.ok ? list.value : []
+  const index = items.findIndex((x) => x.id === result.value.id)
+  const previous = index > 0 ? items[index - 1] : undefined
+  const routed = previous
+    ? await routeBoundaries(
+        routingDeps(),
+        guarded.actor.userId,
+        dayId,
+        [{ from: previous.id, to: result.value.id }],
+        now,
+      )
+    : []
+
+  return NextResponse.json({ ...result.value, routed }, { status: 201 })
 }
